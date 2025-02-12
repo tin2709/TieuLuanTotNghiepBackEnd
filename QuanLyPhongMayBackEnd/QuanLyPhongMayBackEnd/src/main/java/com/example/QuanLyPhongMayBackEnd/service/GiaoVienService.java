@@ -1,13 +1,15 @@
 package com.example.QuanLyPhongMayBackEnd.service;
 
 import com.example.QuanLyPhongMayBackEnd.entity.GiaoVien;
-import com.example.QuanLyPhongMayBackEnd.entity.TaiKhoan;
 import com.example.QuanLyPhongMayBackEnd.repository.GiaoVienRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.UserRepository;
-import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import jakarta.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,6 +28,12 @@ public class GiaoVienService {
 
     public List<GiaoVien> layDSGV() {
         return giaoVienRepository.findAll();
+    }
+
+    // Phương thức phân trang lấy danh sách giáo viên
+    public Page<GiaoVien> layDSGVPhanTrang(int pageNumber) {
+        Pageable pageable = PageRequest.of(pageNumber, 10); // Mỗi trang sẽ có 10 giáo viên
+        return giaoVienRepository.findAll(pageable);
     }
 
     @Transactional
