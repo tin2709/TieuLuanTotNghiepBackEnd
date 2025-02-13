@@ -2,6 +2,7 @@ package com.example.QuanLyPhongMayBackEnd.controller;
 
 import com.example.QuanLyPhongMayBackEnd.entity.CaThucHanh;
 import com.example.QuanLyPhongMayBackEnd.service.CaThucHanhService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -19,7 +20,7 @@ public class CaThucHanhController {
     private CaThucHanhService caThucHanhService;
 
     @PostMapping("/LuuCaThucHanh")
-    public CaThucHanh luu(@RequestBody CaThucHanh caThucHanh){
+    public CaThucHanh luu(@RequestBody @Valid CaThucHanh caThucHanh){
         return caThucHanhService.luu(caThucHanh);
     }
 
