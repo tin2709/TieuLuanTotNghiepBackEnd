@@ -1,10 +1,9 @@
 package com.example.QuanLyPhongMayBackEnd.repository;
 
 import com.example.QuanLyPhongMayBackEnd.entity.TaiKhoan;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-
-@Repository
-public interface TaiKhoanRepository  extends JpaRepository<TaiKhoan, String> {
-
+import java.util.Optional;
+public interface TaiKhoanRepository extends JpaRepository<TaiKhoan, String> {
+    Optional<TaiKhoan> findByTenDangNhap(String tenDangNhap);
 }

@@ -1,7 +1,11 @@
 package com.example.QuanLyPhongMayBackEnd.controller;
 
 import com.example.QuanLyPhongMayBackEnd.entity.TaiKhoan;
+import com.example.QuanLyPhongMayBackEnd.entity.Token;
+import com.example.QuanLyPhongMayBackEnd.repository.TokenRepository;
+import com.example.QuanLyPhongMayBackEnd.security.JwtUtil;
 import com.example.QuanLyPhongMayBackEnd.service.TaiKhoanService;
+import com.example.QuanLyPhongMayBackEnd.service.TokenService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.NonNull;
@@ -9,13 +13,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @CrossOrigin
@@ -23,19 +30,93 @@ import java.util.stream.Collectors;
 public class TaiKhoanController {
 
     @Autowired
-    private TaiKhoanService taiKhoanService;
-    @PostMapping("/luutaikhoan")
+    private PasswordEncoder passwordEncoder; // Được tự động tạo ra bởi Spring Security
 
-    // API để lưu tài khoản
+    @Autowired
+    private TaiKhoanService taiKhoanService;
+
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    @Autowired
+    private TokenService tokenService;
+
+    @Autowired
+    private TokenRepository tokenRepository;
+
+    @PostMapping("/luutaikhoan")
     public String luuTaiKhoan(@Valid @RequestBody TaiKhoan taiKhoan, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return bindingResult.getAllErrors().stream()
                     .map(error -> error.getDefaultMessage())
                     .collect(Collectors.joining(", "));
         }
-        taiKhoanService.luu(taiKhoan);
+
+        // Mã hóa mật khẩu trước khi lưu
+        String encodedPassword = passwordEncoder.encode(taiKhoan.getMatKhau());
+        taiKhoan.setMatKhau(encodedPassword);  // Cập nhật mật khẩu đã được mã hóa
+
+        taiKhoanService.luu(taiKhoan); // Lưu tài khoản vào cơ sở dữ liệu
         return "Tài khoản đã được lưu thành công!";
     }
+
+    @PostMapping("/login")
+    public ResponseEntity<Map<String, String>> login(@RequestParam String username, @RequestParam String password) {
+        Optional<TaiKhoan> taiKhoanOptional = taiKhoanService.timTaiKhoanByUsername(username);
+
+        if (taiKhoanOptional.isPresent()) {
+            TaiKhoan taiKhoan = taiKhoanOptional.get();
+
+            // Kiểm tra mật khẩu
+            if (passwordEncoder.matches(password, taiKhoan.getMatKhau())) {
+                // Tạo token
+                String token = jwtUtil.generateToken(username);
+
+                // Lưu token vào cơ sở dữ liệu
+                Token newToken = tokenService.saveToken(token, taiKhoan);
+
+                // Trả về token
+                Map<String, String> response = new HashMap<>();
+                response.put("token", newToken.getToken());
+                return new ResponseEntity<>(response, HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+            }
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+
+
+    @GetMapping("/checkLogin")
+    public ResponseEntity<Map<String, Object>> checkLogin(@RequestParam String token) {
+        Map<String, Object> response = new HashMap<>();
+
+        // Tìm token trong cơ sở dữ liệu
+        Optional<Token> tokenOptional = tokenRepository.findByToken(token);
+
+        if (tokenOptional.isPresent()) {
+            TaiKhoan taiKhoan = tokenOptional.get().getTaiKhoan(); // Lấy tài khoản từ token
+            response.put("status", "success");
+            response.put("message", "User is logged in");
+            response.put("data", Map.of(
+                    "maTK", taiKhoan.getMaTK(),
+                    "tenDangNhap", taiKhoan.getTenDangNhap(),
+                    "quyen", taiKhoan.getQuyen().getMaQuyen() // Giả sử quyen có phương thức getRole_id()
+            ));
+        } else {
+            // Token không tồn tại hoặc không hợp lệ
+            response.put("status", "error");
+            response.put("message", "Invalid or expired token");
+        }
+
+        return new ResponseEntity<>(response, response.get("status").equals("success") ? HttpStatus.OK : HttpStatus.BAD_REQUEST);
+    }
+
+
+
+
 
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
