@@ -3,6 +3,7 @@ package com.example.QuanLyPhongMayBackEnd.entity;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -29,7 +30,15 @@ public class TaiKhoan {
     @JoinColumn(name = "ma_quyen")
     private Quyen quyen;
 
-    // Getter và Setter
+    @Column(name = "email", unique = true)
+    @NotBlank(message = "Email không được để trống")
+    @Email(message = "Email không hợp lệ")
+    private String email;
+
+    @Column(name = "image")
+    private String image;
+
+    // Getter and Setter methods
     public String getMaTK() { return maTK; }
     public void setMaTK(String maTK) { this.maTK = maTK; }
 
@@ -42,12 +51,20 @@ public class TaiKhoan {
     public Quyen getQuyen() { return quyen; }
     public void setQuyen(Quyen quyen) { this.quyen = quyen; }
 
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+
+    public String getImage() { return image; }
+    public void setImage(String image) { this.image = image; }
+
     // Constructor
-    public TaiKhoan(String maTK, String tenDangNhap, String matKhau, Quyen quyen) {
+    public TaiKhoan(String maTK, String tenDangNhap, String matKhau, Quyen quyen, String email, String image) {
         this.maTK = maTK;
         this.tenDangNhap = tenDangNhap;
         this.matKhau = matKhau;
         this.quyen = quyen;
+        this.email = email;
+        this.image = image;
     }
 
     public TaiKhoan() {
@@ -56,6 +73,8 @@ public class TaiKhoan {
 
     @Override
     public String toString() {
-        return "TaiKhoan [maTK=" + maTK + ", tenDangNhap=" + tenDangNhap + ", matKhau=" + matKhau + ", quyen=" + quyen + "]";
+        return "TaiKhoan [maTK=" + maTK + ", tenDangNhap=" + tenDangNhap + ", matKhau=" + matKhau + ", quyen=" + quyen + ", email=" + email + ", image=" + image + "]";
     }
 }
+
+
