@@ -61,7 +61,7 @@ public class TaiKhoanController {
     public TaiKhoanController(UploadImageFile uploadImageFile) throws UnknownHostException {
         this.uploadImageFile = uploadImageFile;
     }
-//    private String getSubRandom() {
+    //    private String getSubRandom() {
 //        return fileStorageService.provider_RandomString();
 //    }
     @PostMapping("/luutaikhoan")
@@ -197,9 +197,36 @@ public class TaiKhoanController {
     }
 
     // API phân trang lấy danh sách tài khoản
-    @GetMapping("/taikhoan/phantang")
+    @GetMapping("/taikhoan/phantrang")
     public ResponseEntity<Page<TaiKhoan>> layDSTaiKhoanPhanTrang(@RequestParam int pageNumber) {
         Page<TaiKhoan> taiKhoans = taiKhoanService.layDSTaiKhoanPhanTrang(pageNumber);
         return new ResponseEntity<>(taiKhoans, HttpStatus.OK);
+    }
+    @PostMapping("/forgot_password")
+    public ResponseEntity<?> forgotPassword(@RequestParam Map<String, String> request) {
+        String email = request.get("email");
+        return taiKhoanService.handleForgotPassword(email);
+    }
+
+    @PostMapping("/verify_otp_forgot_password")
+    public ResponseEntity<?> verifyOtps(@RequestParam Map<String, String> request) {
+        String email = request.get("email");
+        String otp = request.get("otp");
+        return taiKhoanService.handleVerifyOtp(email, otp);
+    }
+    @PostMapping("/update_password")
+    public ResponseEntity<Map<String, Object>> updatePass(@RequestParam Map<String, String> request) {
+        String email = request.get("email");
+        String password = request.get("password");
+
+        // Gọi service để xử lý logic cập nhật password
+        Map<String, Object> response = taiKhoanService.updatePassword(email, password);
+
+        // Tạo ResponseEntity từ Map
+        if ("success".equals(response.get("status"))) {
+            return ResponseEntity.ok(response); // Trả về 200 OK nếu thành công
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response); // Trả về 401 Unauthorized nếu lỗi
+        }
     }
 }
