@@ -2,6 +2,7 @@ package com.example.QuanLyPhongMayBackEnd.service;
 
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -30,5 +31,16 @@ public class MailService {
         } catch (Exception e) {
             System.err.println("Failed to send email: " + e.getMessage());
         }
+    }
+    public void sendOtp(String email, String otp) {
+        String subject = "Xác thực tài khoản QuanLiPhongMay";
+        String message = "Mã Otp của bạn: " + otp + ". Mã Otp sẽ hết hạn trong vòng 2 phút" ;
+
+        SimpleMailMessage mailMessage = new SimpleMailMessage();
+        mailMessage.setTo(email);
+        mailMessage.setSubject(subject);
+        mailMessage.setText(message);
+
+        javaMailSender.send(mailMessage);
     }
 }
