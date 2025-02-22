@@ -42,6 +42,9 @@ public class GiaoVien {
         this.khoa = khoa;
     }
 
+    public GiaoVien(Long maGiaoVien) {
+    }
+
     public String getHocVi() {
         return hocVi;
     }

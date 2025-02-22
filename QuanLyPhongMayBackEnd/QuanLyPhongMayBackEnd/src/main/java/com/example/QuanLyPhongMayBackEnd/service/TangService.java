@@ -25,7 +25,11 @@ public class TangService {
 
     @Autowired
     private PhongMayService phongMayService;
-
+    @Autowired
+    private TaiKhoanService taiKhoanService;
+    private boolean isUserLoggedIn(String token) {
+        return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
+    }
     public Tang layTangTheoMa(Long maTang) {
         Tang tang = null;
         Optional<Tang> kq = tangRepository.findById(maTang);
@@ -48,7 +52,7 @@ public class TangService {
     }
 
     @Transactional
-    public void xoa(Long maTang) {
+    public void xoa(Long maTang, String token) {
         List<PhongMay> danhSachPhongMay = phongMayRepository.findByTang_MaTang(maTang);
 
         for (PhongMay phongMay : danhSachPhongMay) {
@@ -60,7 +64,7 @@ public class TangService {
             }
 
             // Xoá phòng máy
-            phongMayService.xoa(phongMay.getMaPhong());
+            phongMayService.xoa(phongMay.getMaPhong(),token);
         }
 
         // Sau khi xoá tất cả phòng máy và lịch trực, tiến hành xoá tầng

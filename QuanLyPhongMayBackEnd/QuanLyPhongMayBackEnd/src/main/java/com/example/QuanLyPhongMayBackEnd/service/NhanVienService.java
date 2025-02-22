@@ -22,7 +22,11 @@ public class NhanVienService {
 
     @Autowired
     private UserRepository userRepository;
-
+    @Autowired
+    private TaiKhoanService taiKhoanService;
+    private boolean isUserLoggedIn(String token) {
+        return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
+    }
     public NhanVien layNVTheoMa(String maNV) {
         NhanVien nhanVien = null;
         Optional<NhanVien> kq = nhanVienRepository.findById(maNV);

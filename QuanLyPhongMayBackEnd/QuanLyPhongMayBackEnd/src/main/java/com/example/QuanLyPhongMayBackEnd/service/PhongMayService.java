@@ -27,7 +27,11 @@ public class PhongMayService {
 
     @Autowired
     private PhongMayRepository phongMayRepository;
-
+    @Autowired
+    private TaiKhoanService taiKhoanService;
+    private boolean isUserLoggedIn(String token) {
+        return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
+    }
 
     public PhongMay layPhongMayTheoMa(Long maPhong) {
         PhongMay phongMay = null;
@@ -48,23 +52,27 @@ public class PhongMayService {
         return phongMayRepository.findAll();
     }
 
-    public void xoa(Long maPhong) {
+    public void xoa(Long maPhong, String token) {
 
+        // Get the list of computers and practice sessions for this room
         List<MayTinh> danhSachMayTinh = mayTinhService.layDSMayTinhTheoMaPhong(maPhong);
-        List<CaThucHanh> danhSachCaThucHanh = caThucHanhService.layDSCaThucHanhTheoMaPhong(maPhong);
 
+        // Now, you need to provide both parameters to `layDSCaThucHanhTheoMaPhong`
+        List<CaThucHanh> danhSachCaThucHanh = caThucHanhService.layDSCaThucHanhTheoMaPhong(maPhong, token);
+
+        // Continue with the deletion logic
         for (MayTinh mayTinh : danhSachMayTinh) {
             mayTinhService.xoa(mayTinh.getMaMay());
         }
 
         for (CaThucHanh caThucHanh : danhSachCaThucHanh) {
-            caThucHanhService.xoa(caThucHanh.getMaCa());
+            caThucHanhService.xoa(caThucHanh.getMaCa(),token);
         }
-
 
         entityManager.flush();
         entityManager.clear();
         phongMayRepository.deleteById(maPhong);
+
     }
 
     public PhongMay luu(PhongMay phongMay) {

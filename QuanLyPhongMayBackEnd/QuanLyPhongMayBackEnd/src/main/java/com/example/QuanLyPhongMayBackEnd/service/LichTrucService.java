@@ -14,7 +14,11 @@ public class LichTrucService {
 
     @Autowired
     private LichTrucRepository lichTrucRepository;
-
+    @Autowired
+    private TaiKhoanService taiKhoanService;
+    private boolean isUserLoggedIn(String token) {
+        return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
+    }
     public LichTruc layLTTheoMa(Long maLich) {
         LichTruc lichTruc = null;
         Optional<LichTruc> kq = lichTrucRepository.findById(maLich);

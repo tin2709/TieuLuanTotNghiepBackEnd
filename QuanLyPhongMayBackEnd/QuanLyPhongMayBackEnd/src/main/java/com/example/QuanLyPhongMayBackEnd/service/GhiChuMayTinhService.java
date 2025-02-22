@@ -13,7 +13,11 @@ public class GhiChuMayTinhService {
 
     @Autowired
     private GhiChuMayTinhRepository ghiChuMayTinhRepository;
-
+    @Autowired
+    private TaiKhoanService taiKhoanService;
+    private boolean isUserLoggedIn(String token) {
+        return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
+    }
     public GhiChuMayTinh layGhiChuTheoMa(Long maGhiChuMT) {
         GhiChuMayTinh ghiChuMayTinh = null;
         Optional<GhiChuMayTinh> kq = ghiChuMayTinhRepository.findById(maGhiChuMT);

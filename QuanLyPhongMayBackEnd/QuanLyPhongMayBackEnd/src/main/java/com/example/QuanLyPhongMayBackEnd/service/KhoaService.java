@@ -14,7 +14,11 @@ public class KhoaService {
 
     @Autowired
     private KhoaRepository khoaRepository;
-
+    @Autowired
+    private TaiKhoanService taiKhoanService;
+    private boolean isUserLoggedIn(String token) {
+        return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
+    }
 
     public Khoa layKhoaTheoMa(Long maKhoa) {
         Khoa khoa = null;

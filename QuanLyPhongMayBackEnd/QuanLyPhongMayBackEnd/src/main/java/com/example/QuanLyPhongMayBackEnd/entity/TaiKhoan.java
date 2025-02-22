@@ -38,6 +38,9 @@ public class TaiKhoan {
     @Column(name = "image")
     private String image;
 
+    public TaiKhoan(String taiKhoanMaTK) {
+    }
+
     // Getter and Setter methods
     public String getMaTK() { return maTK; }
     public void setMaTK(String maTK) { this.maTK = maTK; }

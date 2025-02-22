@@ -20,7 +20,11 @@ public class ToaNhaService {
 
     @Autowired
     private LichTrucService lichTrucService;
-
+    @Autowired
+    private TaiKhoanService taiKhoanService;
+    private boolean isUserLoggedIn(String token) {
+        return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
+    }
     public ToaNha layToaNhaTheoMa(Long maToaNha) {
         ToaNha toaNha = null;
         Optional<ToaNha> kq = toaNhaRepository.findById(maToaNha);
@@ -37,14 +41,14 @@ public class ToaNhaService {
     }
 
     @Transactional
-    public void xoa(Long maToaNha) {
+    public void xoa(Long maToaNha,String token) {
         List<Tang> dsTang = tangService.layTangTheoToaNha(maToaNha);
         for (Tang tang : dsTang) {
             List<LichTruc> dsLichTruc = lichTrucService.layLichTrucTheoMaTang(tang.getMaTang());
             for (LichTruc lichTruc : dsLichTruc) {
                 lichTrucService.xoa(lichTruc.getMaLich());
             }
-            tangService.xoa(tang.getMaTang());
+            tangService.xoa(tang.getMaTang(),token);
         }
         toaNhaRepository.deleteById(maToaNha);
     }

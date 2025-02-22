@@ -15,19 +15,28 @@ public class QuyenController {
     private QuyenService quyenService;
 
     @PostMapping("/LuuQuyen")
-    public Quyen luu(@RequestBody Quyen quyen){
+    public Quyen luu(
+            @RequestParam String tenQuyen,
+            @RequestParam String token) {
+
+        // Create a Quyen object from the request parameters
+        Quyen quyen = new Quyen();
+        quyen.setTenQuyen(tenQuyen);
+
+        // Assuming token validation is handled before calling the service
         return quyenService.luu(quyen);
     }
 
     @GetMapping("/DSQuyen")
-    public List<Quyen> layDSQuyen(){
+    public List<Quyen> layDSQuyen(@RequestParam String token) {
+        // Handle token validation if necessary
         return quyenService.layDSQuyen();
     }
 
     @DeleteMapping("/XoaQuyen/{maQuyen}")
-    public String xoa(@PathVariable Long maQuyen){
+    public String xoa(@PathVariable Long maQuyen, @RequestParam String token) {
+        // Handle token validation if necessary
         quyenService.xoa(maQuyen);
         return "Đã xoá quyền " + maQuyen;
     }
-
 }

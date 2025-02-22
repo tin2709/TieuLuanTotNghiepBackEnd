@@ -14,23 +14,30 @@ public class KhoaController {
     @Autowired
     private KhoaService khoaService;
 
+    // API thêm mới khoa
     @PostMapping("/LuuKhoa")
-    public Khoa luu(@RequestBody Khoa khoa){
+    public Khoa luu(@RequestParam Long maKhoa,
+                    @RequestParam String tenKhoa,
+                    @RequestParam String token) {
+        Khoa khoa = new Khoa(maKhoa, tenKhoa);
         return khoaService.luu(khoa);
     }
 
+    // API lấy danh sách khoa
     @GetMapping("/DSKhoa")
-    public List<Khoa> layDSDV(){
+    public List<Khoa> layDSKhoa(@RequestParam String token) {
         return khoaService.layDSKhoa();
     }
 
+    // API lấy khoa theo mã khoa
     @GetMapping("/Khoa/{maKhoa}")
-    public Khoa layKhoaTheoMa(@PathVariable Long maKhoa){
+    public Khoa layKhoaTheoMa(@PathVariable Long maKhoa, @RequestParam String token) {
         return khoaService.layKhoaTheoMa(maKhoa);
     }
 
+    // API xóa khoa theo mã khoa
     @DeleteMapping("/XoaKhoa/{maKhoa}")
-    public String xoa(@PathVariable Long maKhoa){
+    public String xoa(@PathVariable Long maKhoa, @RequestParam String token) {
         khoaService.xoa(maKhoa);
         return "Đã xoá khoa " + maKhoa;
     }

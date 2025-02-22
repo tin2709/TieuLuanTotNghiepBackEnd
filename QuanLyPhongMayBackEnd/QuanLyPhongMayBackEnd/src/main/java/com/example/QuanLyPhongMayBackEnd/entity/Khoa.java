@@ -14,6 +14,9 @@ public class Khoa {
     @Column(name = "ten_khoa")
     private String tenKhoa;
 
+    public Khoa(Long khoaMaKhoa) {
+    }
+
     public Long getMaKhoa() {
         return maKhoa;
     }
