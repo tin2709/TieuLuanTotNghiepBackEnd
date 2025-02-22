@@ -28,6 +28,9 @@ public class MonHoc {
     @JsonIgnore
     private List<CaThucHanh> caThucHanhs;
 
+    public MonHoc(Long maMon) {
+    }
+
     public Long getMaMon() {
         return maMon;
     }

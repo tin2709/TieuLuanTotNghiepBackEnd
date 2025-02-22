@@ -21,7 +21,11 @@ public class GiaoVienService {
 
     @Autowired
     private UserRepository userRepository;
-
+    @Autowired
+    private TaiKhoanService taiKhoanService;
+    private boolean isUserLoggedIn(String token) {
+        return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
+    }
     public GiaoVien layGVTheoMa(String maGiaoVien) {
         return giaoVienRepository.findById(maGiaoVien).orElse(null);
     }

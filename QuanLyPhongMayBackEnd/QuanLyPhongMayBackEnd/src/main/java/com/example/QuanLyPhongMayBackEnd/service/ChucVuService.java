@@ -12,7 +12,11 @@ public class ChucVuService {
 
     @Autowired
     private ChucVuRepository chucVuRepository;
-
+    @Autowired
+    private TaiKhoanService taiKhoanService;
+    private boolean isUserLoggedIn(String token) {
+        return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
+    }
     public ChucVu layCVTheoMa(Long maCV) {
         ChucVu chucVu = null;
         Optional<ChucVu> kq = chucVuRepository.findById(maCV);

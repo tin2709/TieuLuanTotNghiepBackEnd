@@ -5,51 +5,99 @@ import com.example.QuanLyPhongMayBackEnd.repository.CaThucHanhRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class CaThucHanhService {
     @Autowired
     private CaThucHanhRepository caThucHanhRepository;
 
-    public CaThucHanh layCaThucHanhTheoMa(Long maCaThucHanh) {
+    @Autowired
+    private TaiKhoanService taiKhoanService;
+
+    private boolean isUserLoggedIn(String token) {
+        return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
+    }
+
+    // Method to handle user login validation before performing any operation
+    private Map<String, Object> checkTokenAndReturnResponse(String token) {
+        Map<String, Object> response = new HashMap<>();
+        if (!isUserLoggedIn(token)) {
+            response.put("status", "error");
+            response.put("message", "You need to log in to perform this action.");
+        }
+        return response;
+    }
+
+    public CaThucHanh layCaThucHanhTheoMa(Long maCaThucHanh, String token) {
+        Map<String, Object> response = checkTokenAndReturnResponse(token);
+        if (response.containsKey("status") && response.get("status").equals("error")) {
+            return null; // If user is not logged in, return null or handle accordingly
+        }
+
         CaThucHanh caThucHanh = null;
         Optional<CaThucHanh> kq = caThucHanhRepository.findById(maCaThucHanh);
         try {
             caThucHanh = kq.get();
-            return caThucHanh;
         } catch (Exception e) {
-            return caThucHanh;
+            // Handle exception as needed
         }
+        return caThucHanh;
     }
 
-    public List<CaThucHanh> layDSCaThucHanhTheoNgay(Date ngayThucHanh) {
+    public List<CaThucHanh> layDSCaThucHanhTheoNgay(Date ngayThucHanh, String token) {
+        Map<String, Object> response = checkTokenAndReturnResponse(token);
+        if (response.containsKey("status") && response.get("status").equals("error")) {
+            return null; // Return empty or null if not logged in
+        }
         return caThucHanhRepository.findByNgayThucHanh(ngayThucHanh);
     }
 
-    public List<CaThucHanh> layDSCaThucHanh() {
+    public List<CaThucHanh> layDSCaThucHanh(String token) {
+        Map<String, Object> response = checkTokenAndReturnResponse(token);
+        if (response.containsKey("status") && response.get("status").equals("error")) {
+            return null; // Return empty list or null if not logged in
+        }
         return caThucHanhRepository.findAll();
     }
 
-    public void xoa(Long maCaThucHanh) {
+    public void xoa(Long maCaThucHanh, String token) {
+        Map<String, Object> response = checkTokenAndReturnResponse(token);
+        if (response.containsKey("status") && response.get("status").equals("error")) {
+            return; // Do nothing if not logged in
+        }
         caThucHanhRepository.deleteById(maCaThucHanh);
     }
 
-    public List<CaThucHanh> layDSCaThucHanhTheoMonHoc(Long maMon) {
+    public List<CaThucHanh> layDSCaThucHanhTheoMonHoc(Long maMon, String token) {
+        Map<String, Object> response = checkTokenAndReturnResponse(token);
+        if (response.containsKey("status") && response.get("status").equals("error")) {
+            return null; // Return empty list or null if not logged in
+        }
         return caThucHanhRepository.findByMonHoc_MaMon(maMon);
     }
 
-    public CaThucHanh capNhat(CaThucHanh caThucHanh) {
+    public CaThucHanh capNhat(CaThucHanh caThucHanh, String token) {
+        Map<String, Object> response = checkTokenAndReturnResponse(token);
+        if (response.containsKey("status") && response.get("status").equals("error")) {
+            return null; // Return null if not logged in
+        }
         return caThucHanhRepository.save(caThucHanh);
     }
 
-    public CaThucHanh luu(CaThucHanh caThucHanh) {
+    public CaThucHanh luu(CaThucHanh caThucHanh, String token) {
+        Map<String, Object> response = checkTokenAndReturnResponse(token);
+        if (response.containsKey("status") && response.get("status").equals("error")) {
+            return null; // Return null if not logged in
+        }
         return caThucHanhRepository.save(caThucHanh);
     }
 
-    public List<CaThucHanh> layDSCaThucHanhTheoMaPhong(Long maPhong) {
+    public List<CaThucHanh> layDSCaThucHanhTheoMaPhong(Long maPhong, String token) {
+        Map<String, Object> response = checkTokenAndReturnResponse(token);
+        if (response.containsKey("status") && response.get("status").equals("error")) {
+            return null; // Return empty list or null if not logged in
+        }
         return caThucHanhRepository.findByPhongMay_MaPhong(maPhong);
     }
 }

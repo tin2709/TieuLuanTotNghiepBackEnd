@@ -28,6 +28,9 @@ public class PhongMay {
     @JoinColumn(name = "ma_tang", nullable = false)
     private Tang tang;
 
+    public PhongMay(Long maPhong) {
+    }
+
     public List<MayTinh> getMayTinhs() {
         return mayTinhs;
     }

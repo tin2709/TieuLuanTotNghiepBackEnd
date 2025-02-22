@@ -1,4 +1,5 @@
 package com.example.QuanLyPhongMayBackEnd.controller;
+
 import com.example.QuanLyPhongMayBackEnd.entity.GhiChuMayTinh;
 import com.example.QuanLyPhongMayBackEnd.service.GhiChuMayTinhService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,48 +18,81 @@ import java.util.List;
 public class GhiChuMayTinhController {
     @Autowired
     private GhiChuMayTinhService ghiChuMayTinhService;
+
+    // API lưu GhiChuMayTinh
     @PostMapping("/LuuGhiChuMayTinh")
-    public GhiChuMayTinh luu(@RequestBody GhiChuMayTinh ghiChuMayTinh){
+    public GhiChuMayTinh luu(
+            @RequestParam String noiDung,
+            @RequestParam Long maMay,
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date ngayBaoLoi,
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date ngaySua,
+            @RequestParam String maTKBaoLoi,
+            @RequestParam String nguoiSuaLoi,
+            @RequestParam String token) {
+
+        GhiChuMayTinh ghiChuMayTinh = new GhiChuMayTinh(null, noiDung, null, ngayBaoLoi, ngaySua, maTKBaoLoi, nguoiSuaLoi);
         return ghiChuMayTinhService.luu(ghiChuMayTinh);
     }
+
+    // API lấy danh sách GhiChuMayTinh
     @GetMapping("/DSGhiChuMayTinh")
-    public List<GhiChuMayTinh> layDSGhiChuMayTinh(){
+    public List<GhiChuMayTinh> layDSGhiChuMayTinh(@RequestParam String token){
         return ghiChuMayTinhService.layDSGhiChu();
     }
+
+    // API lấy danh sách GhiChuMayTinh theo ngày sửa
     @GetMapping("/DSGhiChuMayTinhTheoNgaySua/{ngaySua}")
     public ResponseEntity<List<GhiChuMayTinh>> layDSGhiChuTheoNgaySua(
-            @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") Date ngaySua) {
-        List<GhiChuMayTinh> dsCGhiChuMayTinh = ghiChuMayTinhService.layDSGhiChuTheoNgaySua(ngaySua);
-        return new ResponseEntity<>(dsCGhiChuMayTinh, HttpStatus.OK);
+            @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") Date ngaySua,
+            @RequestParam String token) {
+        List<GhiChuMayTinh> dsGhiChuMayTinh = ghiChuMayTinhService.layDSGhiChuTheoNgaySua(ngaySua);
+        return new ResponseEntity<>(dsGhiChuMayTinh, HttpStatus.OK);
     }
+
+    // API lấy danh sách GhiChuMayTinh theo ngày báo lỗi
     @GetMapping("/DSGhiChuMayTinhTheoNgayBaoLoi/{ngayBaoLoi}")
     public ResponseEntity<List<GhiChuMayTinh>> layDSGhiChuTheoNgayBaoLoi(
-            @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") Date ngayBaoLoi) {
-        List<GhiChuMayTinh> dsCGhiChuMayTinh = ghiChuMayTinhService.layDSGhiChuTheoNgayBaoLoi(ngayBaoLoi);
-        return new ResponseEntity<>(dsCGhiChuMayTinh, HttpStatus.OK);
+            @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") Date ngayBaoLoi,
+            @RequestParam String token) {
+        List<GhiChuMayTinh> dsGhiChuMayTinh = ghiChuMayTinhService.layDSGhiChuTheoNgayBaoLoi(ngayBaoLoi);
+        return new ResponseEntity<>(dsGhiChuMayTinh, HttpStatus.OK);
     }
+
+    // API lấy GhiChuMayTinh theo mã
     @GetMapping("/GhiChuMayTinh/{maGhiChuMT}")
-    public GhiChuMayTinh layGhiChuTheoMa(@PathVariable Long maGhiChuMT){
+    public GhiChuMayTinh layGhiChuTheoMa(@PathVariable Long maGhiChuMT, @RequestParam String token){
         return ghiChuMayTinhService.layGhiChuTheoMa(maGhiChuMT);
     }
-    @GetMapping("/DSGhiChuMayTinhTheoMayTinh/{maMay}")
-    public ResponseEntity<List<GhiChuMayTinh>> layDSGhiChuTheoMayTinh(@PathVariable Long maMay) {
-        List<GhiChuMayTinh> dsCGhiChuMayTinh = ghiChuMayTinhService.layDSGhiChuTheoMayTinh(maMay);
 
-        if (dsCGhiChuMayTinh.isEmpty()) {
-            return  ResponseEntity.ok(new ArrayList<>());
+    // API lấy danh sách GhiChuMayTinh theo máy tính
+    @GetMapping("/DSGhiChuMayTinhTheoMayTinh/{maMay}")
+    public ResponseEntity<List<GhiChuMayTinh>> layDSGhiChuTheoMayTinh(@PathVariable Long maMay, @RequestParam String token) {
+        List<GhiChuMayTinh> dsGhiChuMayTinh = ghiChuMayTinhService.layDSGhiChuTheoMayTinh(maMay);
+
+        if (dsGhiChuMayTinh.isEmpty()) {
+            return ResponseEntity.ok(new ArrayList<>());
         }
-        return new ResponseEntity<>(dsCGhiChuMayTinh, HttpStatus.OK);
+        return new ResponseEntity<>(dsGhiChuMayTinh, HttpStatus.OK);
     }
+
+    // API cập nhật GhiChuMayTinh
     @PutMapping("/CapNhatGhiChuMayTinh/{maGhiChuMT}")
-    public GhiChuMayTinh capNhat(@PathVariable Long maGhiChuMT, @RequestBody GhiChuMayTinh ghiChuMayTinh){
+    public GhiChuMayTinh capNhat(
+            @PathVariable Long maGhiChuMT,
+            @RequestParam String noiDung,
+            @RequestParam Long maMay,
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date ngayBaoLoi,
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date ngaySua,
+            @RequestParam String maTKBaoLoi,
+            @RequestParam String nguoiSuaLoi,
+            @RequestParam String token) {
+
         GhiChuMayTinh existingGhiChu = ghiChuMayTinhService.layGhiChuTheoMa(maGhiChuMT);
         if (existingGhiChu != null) {
-            existingGhiChu.setNgayBaoLoi(ghiChuMayTinh.getNgayBaoLoi());
-            existingGhiChu.setNgaySua(ghiChuMayTinh.getNgaySua());
-            existingGhiChu.setNoiDung(ghiChuMayTinh.getNoiDung());
-            existingGhiChu.setMayTinh(ghiChuMayTinh.getMayTinh());
-
+            existingGhiChu.setNgayBaoLoi(ngayBaoLoi);
+            existingGhiChu.setNgaySua(ngaySua);
+            existingGhiChu.setNoiDung(noiDung);
+            existingGhiChu.setMayTinh(null); // Không có thay đổi cho MayTinh
 
             return ghiChuMayTinhService.capNhat(existingGhiChu);
         } else {
@@ -66,13 +100,16 @@ public class GhiChuMayTinhController {
         }
     }
 
+    // API xóa GhiChuMayTinh
     @DeleteMapping("/XoaGhiChuMayTinh/{maGhiChuMT}")
-    public String xoa(@PathVariable Long maGhiChuMT){
+    public String xoa(@PathVariable Long maGhiChuMT, @RequestParam String token){
         ghiChuMayTinhService.xoa(maGhiChuMT);
-        return "Đã xoá chức vụ " + maGhiChuMT;
+        return "Đã xoá ghi chú máy tính " + maGhiChuMT;
     }
+
+    // API lấy ghi chú gần nhất theo máy tính
     @GetMapping("/GhiChuGanNhatTheoPhongMay/{maMay}")
-    public ResponseEntity<GhiChuMayTinh> layGhiChuGanNhatTheoMayTinh(@PathVariable Long maMay) {
+    public ResponseEntity<GhiChuMayTinh> layGhiChuGanNhatTheoMayTinh(@PathVariable Long maMay, @RequestParam String token) {
         List<GhiChuMayTinh> dsGhiChu = ghiChuMayTinhService.layDSGhiChuTheoMayTinh(maMay);
         if (dsGhiChu.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -82,5 +119,4 @@ public class GhiChuMayTinhController {
                 .orElse(null);
         return new ResponseEntity<>(ghiChuGanNhat, HttpStatus.OK);
     }
-
 }

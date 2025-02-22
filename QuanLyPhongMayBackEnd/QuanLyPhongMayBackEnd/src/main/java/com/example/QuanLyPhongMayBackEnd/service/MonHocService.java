@@ -15,7 +15,11 @@ public class MonHocService {
 
     @Autowired
     private MonHocRepository monHocRepository;
-
+    @Autowired
+    private TaiKhoanService taiKhoanService;
+    private boolean isUserLoggedIn(String token) {
+        return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
+    }
     public MonHoc layMonHocTheoMa(Long maMon) {
         MonHoc monHoc = null;
         Optional<MonHoc> kq = monHocRepository.findById(maMon);

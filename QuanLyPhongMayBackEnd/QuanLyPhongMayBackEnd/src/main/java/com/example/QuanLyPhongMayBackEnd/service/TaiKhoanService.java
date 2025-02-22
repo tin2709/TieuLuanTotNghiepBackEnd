@@ -2,9 +2,11 @@ package com.example.QuanLyPhongMayBackEnd.service;
 
 import com.example.QuanLyPhongMayBackEnd.entity.Auth;
 import com.example.QuanLyPhongMayBackEnd.entity.TaiKhoan;
+import com.example.QuanLyPhongMayBackEnd.entity.Token;
 import com.example.QuanLyPhongMayBackEnd.repository.AuthRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.TaiKhoanRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.TokenRepository;
+import com.example.QuanLyPhongMayBackEnd.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -33,6 +35,8 @@ public class TaiKhoanService {
     private AuthService authService;
     @Autowired
     private MailService mailService;
+    @Autowired
+    private JwtUtil jwtUtil;
     // Xóa tài khoản theo mã
     public void xoa(String maTK) {
         taiKhoanRepository.deleteById(maTK);
@@ -50,6 +54,33 @@ public class TaiKhoanService {
     public Page<TaiKhoan> layDSTaiKhoanPhanTrang(int pageNumber) {
         Pageable pageable = PageRequest.of(pageNumber, 10); // Mỗi trang 10 tài khoản
         return taiKhoanRepository.findAll(pageable);
+    }
+    public Map<String, Object> checkUserLoginStatus(String tokenValue) {
+        Map<String, Object> response = new HashMap<>();
+
+        // Tìm token trong cơ sở dữ liệu
+        Optional<Token> token = tokenRepository.findByToken(tokenValue);
+
+        if (token.isPresent() && token.get().getExpiresAt().isAfter(LocalDateTime.now())) {
+            // Token hợp lệ, lấy thông tin người dùng
+            TaiKhoan taiKhoan = token.get().getTaiKhoan();
+            Map<String, Object> userData = new HashMap<>();
+            userData.put("id", taiKhoan.getMaTK());
+            userData.put("username", taiKhoan.getTenDangNhap());
+            userData.put("email", taiKhoan.getEmail());
+            userData.put("role", taiKhoan.getQuyen().getMaQuyen());
+            userData.put("avatar_url", taiKhoan.getImage());
+
+            response.put("status", "success");
+            response.put("message", "User is logged in");
+            response.put("data", Map.of("user", userData));
+        } else {
+            // Token không hợp lệ hoặc hết hạn
+            response.put("status", "error");
+            response.put("message", "Invalid or expired token");
+        }
+
+        return response;
     }
 
     // Tìm tài khoản theo username (dùng trong login)
@@ -158,6 +189,44 @@ public class TaiKhoanService {
             throw new RuntimeException(e);
         }
 
+        return response;
+    }
+    public Map<String, Object> reLogin(String tokenValue) throws Exception {
+        Map<String, Object> response = new HashMap<>();
+        Optional<Token> optionalToken = tokenRepository.findByToken(tokenValue);
+
+        if (optionalToken.isPresent() && optionalToken.get().getExpiresAt().isAfter(LocalDateTime.now())) {
+            TaiKhoan taiKhoan = optionalToken.get().getTaiKhoan();
+            tokenRepository.delete(optionalToken.get());
+
+            String newTokenValue = jwtUtil.generateToken(taiKhoan.getTenDangNhap());
+            Token newToken = new Token(newTokenValue, LocalDateTime.now(),
+                    LocalDateTime.now().plusSeconds(jwtUtil.getExpiration()), taiKhoan);
+            tokenRepository.save(newToken);
+
+            Map<String, Object> userData = new HashMap<>();
+            userData.put("id", taiKhoan.getMaTK());
+            userData.put("username", taiKhoan.getTenDangNhap());
+            userData.put("email", taiKhoan.getEmail());
+            userData.put("role", taiKhoan.getQuyen().getMaQuyen());
+            userData.put("avatar_url", taiKhoan.getImage());
+
+
+            response.put("relogin", Map.of(
+                    "Login", true,
+                    "status", "success",
+                    "message", "Login successful with existing token",
+                    "newToken", newTokenValue,
+                    "data", Map.of("user", userData),
+                    "time", LocalDateTime.now()
+            ));
+        } else {
+            response.put("login", Map.of(
+                    "Login", false,
+                    "status", "error",
+                    "message", "Invalid or expired token"
+            ));
+        }
         return response;
     }
 }

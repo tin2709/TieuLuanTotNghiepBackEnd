@@ -142,6 +142,10 @@ public class TaiKhoanController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
+    @PostMapping("/reLogin")
+    public Map<String, Object> reLogin(@RequestParam String token) throws Exception {
+        return taiKhoanService.reLogin(token);
+    }
 
 
 
