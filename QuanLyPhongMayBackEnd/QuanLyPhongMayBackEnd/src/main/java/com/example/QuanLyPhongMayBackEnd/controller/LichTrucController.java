@@ -28,40 +28,41 @@ public class LichTrucController {
                         @RequestParam Long maNhanVien,
                         @RequestParam Long maTang,
                         @RequestParam String token) {
+
         // Tạo đối tượng LichTruc từ tham số truyền vào
         LichTruc lichTruc = new LichTruc(maLich, ngayTruc, thoiGianBatDau, thoiGianKetThuc, null, null);
-        return lichTrucService.luu(lichTruc);
+        return lichTrucService.luu(lichTruc, token);
     }
 
     // Lấy danh sách lịch trực
     @GetMapping("/DSLichTruc")
     public List<LichTruc> layDSLT(@RequestParam String token) {
-        return lichTrucService.layDSLT();
+        return lichTrucService.layDSLT(token);
     }
 
     // Lấy lịch trực theo mã lịch
     @GetMapping("/LichTruc/{maLich}")
     public LichTruc layLTTheoMa(@PathVariable Long maLich, @RequestParam String token) {
-        return lichTrucService.layLTTheoMa(maLich);
+        return lichTrucService.layLTTheoMa(maLich,token);
     }
 
     // Lấy lịch trực theo mã tầng
     @GetMapping("/LichTrucTheoTang/{maTang}")
     public List<LichTruc> layLichTrucTheoTang(@PathVariable Long maTang, @RequestParam String token) {
-        return lichTrucService.layLichTrucTheoMaTang(maTang);
+        return lichTrucService.layLichTrucTheoMaTang(maTang,token);
     }
 
     // Xóa lịch trực
     @DeleteMapping("/XoaLichTruc/{maLich}")
     public String xoa(@PathVariable Long maLich, @RequestParam String token) {
-        lichTrucService.xoa(maLich);
+        lichTrucService.xoa(maLich,token);
         return "Đã xoá lịch trực " + maLich;
     }
 
     // Lấy các tầng chưa có nhân viên trực trong tháng
     @GetMapping("/TangChuaCoNhanVienTrucTrongThang")
     public List<Tang> layTangChuaCoNhanVienTrucTrongThang(@RequestParam String token) {
-        return lichTrucService.layTangChuaCoNhanVienTrucTrongThang();
+        return lichTrucService.layTangChuaCoNhanVienTrucTrongThang(token);
     }
 
     // Cập nhật lịch trực
@@ -75,6 +76,6 @@ public class LichTrucController {
                                     @RequestParam String token) {
         // Tạo đối tượng LichTruc từ tham số truyền vào và cập nhật
         LichTruc lichTruc = new LichTruc(maLich, ngayTruc, thoiGianBatDau, thoiGianKetThuc, null, null);
-        return lichTrucService.updateLichTruc(lichTruc);
+        return lichTrucService.updateLichTruc(lichTruc,token);
     }
 }

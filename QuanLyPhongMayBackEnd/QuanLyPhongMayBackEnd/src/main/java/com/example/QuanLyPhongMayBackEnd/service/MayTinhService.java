@@ -25,37 +25,55 @@ public class MayTinhService {
         return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
     }
     // Phương thức lấy máy tính theo mã
-    public MayTinh layMayTinhTheoMa(Long maMay) {
+    public MayTinh layMayTinhTheoMa(Long maMay,String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         Optional<MayTinh> mayTinhOptional = mayTinhRepository.findById(maMay);
         return mayTinhOptional.orElse(null);  // Trả về null nếu không tìm thấy
     }
 
     // Phương thức lấy máy tính theo trạng thái
-    public List<MayTinh> findByTrangThai(String trangThai) {
+    public List<MayTinh> findByTrangThai(String trangThai,String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return mayTinhRepository.findByTrangThai(trangThai);
     }
 
     // Phương thức lấy danh sách máy tính theo mã phòng
-    public List<MayTinh> layDSMayTinhTheoMaPhong(Long maPhong) {
+    public List<MayTinh> layDSMayTinhTheoMaPhong(Long maPhong,String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return mayTinhRepository.findByPhongMay_MaPhong(maPhong);
     }
 
     // Phương thức lấy danh sách tất cả máy tính
-    public List<MayTinh> layDSMayTinh() {
+    public List<MayTinh> layDSMayTinh(String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return mayTinhRepository.findAll();
     }
 
     // Phương thức xóa máy tính theo mã
     @Transactional
-    public void xoa(Long maMay) {
+    public void xoa(Long maMay, String token) {
+        if (!isUserLoggedIn(token)) {
+            return; // Token không hợp lệ
+        }
         mayTinhRepository.deleteById(maMay);
     }
 
     // Phương thức lưu máy tính (cập nhật thêm phongMay)
     @Transactional
-    public MayTinh luu(MayTinh mayTinh) {
+    public MayTinh luu(MayTinh mayTinh, String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         // Kiểm tra PhongMay từ maPhong
-        PhongMay phongMay = getPhongMayById(mayTinh.getPhongMay().getMaPhong());
+        PhongMay phongMay = getPhongMayById(mayTinh.getPhongMay().getMaPhong(), token);
         if (phongMay != null) {
             mayTinh.setPhongMay(phongMay);  // Gán PhongMay cho máy tính
         }
@@ -63,7 +81,10 @@ public class MayTinhService {
     }
 
     // Phương thức lấy PhongMay theo maPhong
-    public PhongMay getPhongMayById(Long maPhong) {
+    public PhongMay getPhongMayById(Long maPhong,String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         Optional<PhongMay> phongMayOptional = phongMayRepository.findById(maPhong);
         return phongMayOptional.orElse(null);  // Trả về null nếu không tìm thấy
     }

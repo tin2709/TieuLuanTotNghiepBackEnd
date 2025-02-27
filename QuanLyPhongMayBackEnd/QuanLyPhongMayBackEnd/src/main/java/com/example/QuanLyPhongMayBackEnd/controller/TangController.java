@@ -26,7 +26,7 @@ public class TangController {
             @RequestParam String token) {
 
         // Retrieve the ToaNha entity based on maToaNha
-        ToaNha toaNha = toaNhaService.layToaNhaTheoMa(maToaNha); // You may need to create this method in the ToaNhaService
+        ToaNha toaNha = toaNhaService.layToaNhaTheoMa(maToaNha, token); // You may need to create this method in the ToaNhaService
 
         // Create Tang object and set fields
         Tang tang = new Tang();
@@ -35,13 +35,13 @@ public class TangController {
 
         // Handle token validation if needed
 
-        return tangService.luu(tang);
+        return tangService.luu(tang, token);
     }
 
     @GetMapping("/DSTang")
     public List<Tang> layDSTang(@RequestParam String token) {
         // Handle token validation if needed
-        return tangService.layDSTang();
+        return tangService.layDSTang(token);
     }
 
     @DeleteMapping("/XoaTang/{maTang}")
@@ -54,12 +54,12 @@ public class TangController {
     @GetMapping("/TangTheoToaNha/{maToaNha}")
     public List<Tang> layTangTheoToaNha(@PathVariable Long maToaNha, @RequestParam String token) {
         // Handle token validation if needed
-        return tangService.layTangTheoToaNha(maToaNha);
+        return tangService.layTangTheoToaNha(maToaNha, token);
     }
 
     @GetMapping("/Tang/{maTang}")
     public Tang layTangTheoMa(@PathVariable Long maTang, @RequestParam String token) {
         // Handle token validation if needed
-        return tangService.layTangTheoMa(maTang);
+        return tangService.layTangTheoMa(maTang, token);
     }
 }

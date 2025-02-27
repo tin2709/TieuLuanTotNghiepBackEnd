@@ -8,7 +8,6 @@ public class Quyen {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ma_quyen")
     private Long maQuyen;
 
     @Column(name = "ten_quyen", columnDefinition = "nvarchar(50)" , nullable = false)

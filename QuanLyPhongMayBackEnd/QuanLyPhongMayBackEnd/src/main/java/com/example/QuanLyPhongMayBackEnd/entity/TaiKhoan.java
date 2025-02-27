@@ -39,6 +39,7 @@ public class TaiKhoan {
     private String image;
 
     public TaiKhoan(String taiKhoanMaTK) {
+        this.maTK = taiKhoanMaTK;
     }
 
     // Getter and Setter methods

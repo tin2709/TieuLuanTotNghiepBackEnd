@@ -1,9 +1,13 @@
 package com.example.QuanLyPhongMayBackEnd.entity;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 
 @Entity
 @Table(name = "khoa")
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "maKhoa")
+
 public class Khoa {
 
     @Id
@@ -14,8 +18,10 @@ public class Khoa {
     @Column(name = "ten_khoa")
     private String tenKhoa;
 
-    public Khoa(Long khoaMaKhoa) {
+    public Khoa(String khoaMaKhoa) {
+        this.maKhoa = Long.valueOf(khoaMaKhoa);
     }
+
 
     public Long getMaKhoa() {
         return maKhoa;

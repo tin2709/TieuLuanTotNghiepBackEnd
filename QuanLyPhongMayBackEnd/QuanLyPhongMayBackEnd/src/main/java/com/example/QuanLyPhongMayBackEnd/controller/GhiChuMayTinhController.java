@@ -31,13 +31,13 @@ public class GhiChuMayTinhController {
             @RequestParam String token) {
 
         GhiChuMayTinh ghiChuMayTinh = new GhiChuMayTinh(null, noiDung, null, ngayBaoLoi, ngaySua, maTKBaoLoi, nguoiSuaLoi);
-        return ghiChuMayTinhService.luu(ghiChuMayTinh);
+        return ghiChuMayTinhService.luu(ghiChuMayTinh, token);
     }
 
     // API lấy danh sách GhiChuMayTinh
     @GetMapping("/DSGhiChuMayTinh")
     public List<GhiChuMayTinh> layDSGhiChuMayTinh(@RequestParam String token){
-        return ghiChuMayTinhService.layDSGhiChu();
+        return ghiChuMayTinhService.layDSGhiChu(token);
     }
 
     // API lấy danh sách GhiChuMayTinh theo ngày sửa
@@ -45,7 +45,7 @@ public class GhiChuMayTinhController {
     public ResponseEntity<List<GhiChuMayTinh>> layDSGhiChuTheoNgaySua(
             @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") Date ngaySua,
             @RequestParam String token) {
-        List<GhiChuMayTinh> dsGhiChuMayTinh = ghiChuMayTinhService.layDSGhiChuTheoNgaySua(ngaySua);
+        List<GhiChuMayTinh> dsGhiChuMayTinh = ghiChuMayTinhService.layDSGhiChuTheoNgaySua(ngaySua, token);
         return new ResponseEntity<>(dsGhiChuMayTinh, HttpStatus.OK);
     }
 
@@ -54,20 +54,20 @@ public class GhiChuMayTinhController {
     public ResponseEntity<List<GhiChuMayTinh>> layDSGhiChuTheoNgayBaoLoi(
             @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") Date ngayBaoLoi,
             @RequestParam String token) {
-        List<GhiChuMayTinh> dsGhiChuMayTinh = ghiChuMayTinhService.layDSGhiChuTheoNgayBaoLoi(ngayBaoLoi);
+        List<GhiChuMayTinh> dsGhiChuMayTinh = ghiChuMayTinhService.layDSGhiChuTheoNgayBaoLoi(ngayBaoLoi, token);
         return new ResponseEntity<>(dsGhiChuMayTinh, HttpStatus.OK);
     }
 
     // API lấy GhiChuMayTinh theo mã
     @GetMapping("/GhiChuMayTinh/{maGhiChuMT}")
     public GhiChuMayTinh layGhiChuTheoMa(@PathVariable Long maGhiChuMT, @RequestParam String token){
-        return ghiChuMayTinhService.layGhiChuTheoMa(maGhiChuMT);
+        return ghiChuMayTinhService.layGhiChuTheoMa(maGhiChuMT, token);
     }
 
     // API lấy danh sách GhiChuMayTinh theo máy tính
     @GetMapping("/DSGhiChuMayTinhTheoMayTinh/{maMay}")
     public ResponseEntity<List<GhiChuMayTinh>> layDSGhiChuTheoMayTinh(@PathVariable Long maMay, @RequestParam String token) {
-        List<GhiChuMayTinh> dsGhiChuMayTinh = ghiChuMayTinhService.layDSGhiChuTheoMayTinh(maMay);
+        List<GhiChuMayTinh> dsGhiChuMayTinh = ghiChuMayTinhService.layDSGhiChuTheoMayTinh(maMay, token);
 
         if (dsGhiChuMayTinh.isEmpty()) {
             return ResponseEntity.ok(new ArrayList<>());
@@ -87,14 +87,14 @@ public class GhiChuMayTinhController {
             @RequestParam String nguoiSuaLoi,
             @RequestParam String token) {
 
-        GhiChuMayTinh existingGhiChu = ghiChuMayTinhService.layGhiChuTheoMa(maGhiChuMT);
+        GhiChuMayTinh existingGhiChu = ghiChuMayTinhService.layGhiChuTheoMa(maGhiChuMT, token);
         if (existingGhiChu != null) {
             existingGhiChu.setNgayBaoLoi(ngayBaoLoi);
             existingGhiChu.setNgaySua(ngaySua);
             existingGhiChu.setNoiDung(noiDung);
             existingGhiChu.setMayTinh(null); // Không có thay đổi cho MayTinh
 
-            return ghiChuMayTinhService.capNhat(existingGhiChu);
+            return ghiChuMayTinhService.capNhat(existingGhiChu, token);
         } else {
             return null;
         }
@@ -103,14 +103,14 @@ public class GhiChuMayTinhController {
     // API xóa GhiChuMayTinh
     @DeleteMapping("/XoaGhiChuMayTinh/{maGhiChuMT}")
     public String xoa(@PathVariable Long maGhiChuMT, @RequestParam String token){
-        ghiChuMayTinhService.xoa(maGhiChuMT);
+        ghiChuMayTinhService.xoa(maGhiChuMT, token);
         return "Đã xoá ghi chú máy tính " + maGhiChuMT;
     }
 
     // API lấy ghi chú gần nhất theo máy tính
     @GetMapping("/GhiChuGanNhatTheoPhongMay/{maMay}")
     public ResponseEntity<GhiChuMayTinh> layGhiChuGanNhatTheoMayTinh(@PathVariable Long maMay, @RequestParam String token) {
-        List<GhiChuMayTinh> dsGhiChu = ghiChuMayTinhService.layDSGhiChuTheoMayTinh(maMay);
+        List<GhiChuMayTinh> dsGhiChu = ghiChuMayTinhService.layDSGhiChuTheoMayTinh(maMay, token);
         if (dsGhiChu.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }

@@ -25,7 +25,10 @@ public class ToaNhaService {
     private boolean isUserLoggedIn(String token) {
         return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
     }
-    public ToaNha layToaNhaTheoMa(Long maToaNha) {
+    public ToaNha layToaNhaTheoMa(Long maToaNha, String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         ToaNha toaNha = null;
         Optional<ToaNha> kq = toaNhaRepository.findById(maToaNha);
         try {
@@ -36,24 +39,33 @@ public class ToaNhaService {
         }
     }
 
-    public List<ToaNha> layDSToaNha() {
+    public List<ToaNha> layDSToaNha(String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return toaNhaRepository.findAll();
     }
 
     @Transactional
     public void xoa(Long maToaNha,String token) {
-        List<Tang> dsTang = tangService.layTangTheoToaNha(maToaNha);
+        if (!isUserLoggedIn(token)) {
+            return ; // Token không hợp lệ
+        }
+        List<Tang> dsTang = tangService.layTangTheoToaNha(maToaNha, token);
         for (Tang tang : dsTang) {
-            List<LichTruc> dsLichTruc = lichTrucService.layLichTrucTheoMaTang(tang.getMaTang());
+            List<LichTruc> dsLichTruc = lichTrucService.layLichTrucTheoMaTang(tang.getMaTang(), token);
             for (LichTruc lichTruc : dsLichTruc) {
-                lichTrucService.xoa(lichTruc.getMaLich());
+                lichTrucService.xoa(lichTruc.getMaLich(), token);
             }
             tangService.xoa(tang.getMaTang(),token);
         }
         toaNhaRepository.deleteById(maToaNha);
     }
 
-    public ToaNha luu(ToaNha toaNha) {
+    public ToaNha luu(ToaNha toaNha,String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return toaNhaRepository.save(toaNha);
     }
 }

@@ -34,10 +34,10 @@ public class MayTinhController {
         MayTinh mayTinh = new MayTinh(maMay, trangThai, moTa, ngayLapDat, null);  // PhongMay sẽ được xử lý sau
 
         // Cần xử lý `PhongMay` sau khi lấy từ `maPhong`, giả sử có một phương thức trong service để lấy PhongMay
-        mayTinh.setPhongMay(mayTinhService.getPhongMayById(maPhong));
+        mayTinh.setPhongMay(mayTinhService.getPhongMayById(maPhong, token));
 
         // Lưu máy tính
-        MayTinh savedMayTinh = mayTinhService.luu(mayTinh);
+        MayTinh savedMayTinh = mayTinhService.luu(mayTinh, token);
         return new ResponseEntity<>(savedMayTinh, HttpStatus.CREATED);
     }
 
@@ -49,7 +49,7 @@ public class MayTinhController {
         // In ra token để kiểm tra (có thể thay thế bằng việc xác thực token trong thực tế)
         System.out.println("Token: " + token);
 
-        return mayTinhService.findByTrangThai(trangThai);
+        return mayTinhService.findByTrangThai(trangThai, token);
     }
 
     // Lấy danh sách máy tính
@@ -59,7 +59,7 @@ public class MayTinhController {
         // In ra token để kiểm tra (có thể thay thế bằng việc xác thực token trong thực tế)
         System.out.println("Token: " + token);
 
-        return mayTinhService.layDSMayTinh();
+        return mayTinhService.layDSMayTinh(token);
     }
 
     // Xóa máy tính theo mã
@@ -69,7 +69,7 @@ public class MayTinhController {
         // In ra token để kiểm tra (có thể thay thế bằng việc xác thực token trong thực tế)
         System.out.println("Token: " + token);
 
-        mayTinhService.xoa(maMay);
+        mayTinhService.xoa(maMay, token);
         return new ResponseEntity<>("Đã xoá máy tính với mã " + maMay, HttpStatus.OK);
     }
 
@@ -80,7 +80,7 @@ public class MayTinhController {
         // In ra token để kiểm tra (có thể thay thế bằng việc xác thực token trong thực tế)
         System.out.println("Token: " + token);
 
-        MayTinh mayTinh = mayTinhService.layMayTinhTheoMa(maMay);
+        MayTinh mayTinh = mayTinhService.layMayTinhTheoMa(maMay, token);
         if (mayTinh != null) {
             return new ResponseEntity<>(mayTinh, HttpStatus.OK);
         }

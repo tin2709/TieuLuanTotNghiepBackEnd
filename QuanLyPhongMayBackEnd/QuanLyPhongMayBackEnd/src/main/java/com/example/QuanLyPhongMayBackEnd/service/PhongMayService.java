@@ -33,7 +33,10 @@ public class PhongMayService {
         return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
     }
 
-    public PhongMay layPhongMayTheoMa(Long maPhong) {
+    public PhongMay layPhongMayTheoMa(Long maPhong,String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         PhongMay phongMay = null;
         Optional<PhongMay> kq = phongMayRepository.findById(maPhong);
         try {
@@ -44,25 +47,34 @@ public class PhongMayService {
         }
     }
 
-    public List<PhongMay> findByTrangThai(String trangThai) {
+    public List<PhongMay> findByTrangThai(String trangThai,String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return phongMayRepository.findByTrangThai(trangThai);
     }
 
-    public List<PhongMay> layDSPhongMay() {
+    public List<PhongMay> layDSPhongMay(String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return phongMayRepository.findAll();
     }
 
     public void xoa(Long maPhong, String token) {
+        if (!isUserLoggedIn(token)) {
+            return; // Token không hợp lệ
+        }
 
         // Get the list of computers and practice sessions for this room
-        List<MayTinh> danhSachMayTinh = mayTinhService.layDSMayTinhTheoMaPhong(maPhong);
+        List<MayTinh> danhSachMayTinh = mayTinhService.layDSMayTinhTheoMaPhong(maPhong, token);
 
         // Now, you need to provide both parameters to `layDSCaThucHanhTheoMaPhong`
         List<CaThucHanh> danhSachCaThucHanh = caThucHanhService.layDSCaThucHanhTheoMaPhong(maPhong, token);
 
         // Continue with the deletion logic
         for (MayTinh mayTinh : danhSachMayTinh) {
-            mayTinhService.xoa(mayTinh.getMaMay());
+            mayTinhService.xoa(mayTinh.getMaMay(), token);
         }
 
         for (CaThucHanh caThucHanh : danhSachCaThucHanh) {
@@ -75,11 +87,17 @@ public class PhongMayService {
 
     }
 
-    public PhongMay luu(PhongMay phongMay) {
+    public PhongMay luu(PhongMay phongMay,String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return phongMayRepository.save(phongMay);
     }
 
-    public PhongMay capNhatTheoMa(Long maPhong, PhongMay phongMay) {
+    public PhongMay capNhatTheoMa(Long maPhong, PhongMay phongMay, String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         Optional<PhongMay> phongMayDB = phongMayRepository.findById(maPhong);
         if (phongMayDB.isPresent()) {
             PhongMay phongMayCu = phongMayDB.get();
@@ -88,7 +106,10 @@ public class PhongMayService {
         return null;
     }
 
-    public List<PhongMay> layPhongMayTheoMaTang(Long maTang) {
+    public List<PhongMay> layPhongMayTheoMaTang(Long maTang, String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return phongMayRepository.findByTang_MaTang(maTang);
     }
 }

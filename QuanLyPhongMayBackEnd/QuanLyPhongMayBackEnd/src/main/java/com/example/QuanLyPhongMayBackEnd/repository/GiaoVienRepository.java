@@ -7,4 +7,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface GiaoVienRepository extends JpaRepository<GiaoVien, String> {
 
+    // Custom method to delete GiaoVien by maGiaoVien
+    void deleteByMaGiaoVien(Long maGiaoVien);
 }

@@ -30,7 +30,10 @@ public class TangService {
     private boolean isUserLoggedIn(String token) {
         return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
     }
-    public Tang layTangTheoMa(Long maTang) {
+    public Tang layTangTheoMa(Long maTang, String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         Tang tang = null;
         Optional<Tang> kq = tangRepository.findById(maTang);
         try {
@@ -41,26 +44,35 @@ public class TangService {
         }
     }
 
-    public List<PhongMay> layDSPhongMayTheoTang(Long maTang) {
-        return phongMayService.layPhongMayTheoMaTang(maTang);
+    public List<PhongMay> layDSPhongMayTheoTang(Long maTang, String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
+        return phongMayService.layPhongMayTheoMaTang(maTang, token);
     }
 
 
 
-    public List<Tang> layDSTang() {
+    public List<Tang> layDSTang(String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return tangRepository.findAll();
     }
 
     @Transactional
     public void xoa(Long maTang, String token) {
+        if (!isUserLoggedIn(token)) {
+            return; // Token không hợp lệ
+        }
         List<PhongMay> danhSachPhongMay = phongMayRepository.findByTang_MaTang(maTang);
 
         for (PhongMay phongMay : danhSachPhongMay) {
-            List<LichTruc> dsLichTruc = lichTrucService.layLichTrucTheoMaTang(maTang);
+            List<LichTruc> dsLichTruc = lichTrucService.layLichTrucTheoMaTang(maTang, token);
 
             // Xoá từng lịch trực liên quan
             for (LichTruc lichTruc : dsLichTruc) {
-                lichTrucService.xoa(lichTruc.getMaLich());
+                lichTrucService.xoa(lichTruc.getMaLich(), token);
             }
 
             // Xoá phòng máy
@@ -71,15 +83,24 @@ public class TangService {
         tangRepository.deleteById(maTang);
     }
 
-    public Tang luu(Tang tang) {
+    public Tang luu(Tang tang, String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return tangRepository.save(tang);
     }
 
-    public List<Tang> layTangTheoToaNha(Long maToaNha) {
+    public List<Tang> layTangTheoToaNha(Long maToaNha, String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return tangRepository.findByToaNha_MaToaNha(maToaNha);
     }
 
-    public Long tinhSoLuongTangTheoMaToaNha(Long maToaNha) {
+    public Long tinhSoLuongTangTheoMaToaNha(Long maToaNha,String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return tangRepository.countByToaNha_MaToaNha(maToaNha);
     }
 }

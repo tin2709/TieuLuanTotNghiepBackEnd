@@ -23,25 +23,25 @@ public class ChucVuController {
             @RequestParam String token) {
         // Tạo đối tượng ChucVu từ tham số tenCV
         ChucVu chucVu = new ChucVu(null, tenCV);
-        return chucVuService.luu(chucVu);
+        return chucVuService.luu(chucVu,token);
     }
 
     // API lấy danh sách ChucVu
     @GetMapping("/DSChucVu")
     public List<ChucVu> layDSDV(@RequestParam String token) {
-        return chucVuService.layDSCV();
+        return chucVuService.layDSCV(token);
     }
 
     // API lấy ChucVu theo mã
     @GetMapping("/ChucVu/{maCV}")
     public ChucVu layCVTheoMa(@PathVariable Long maCV, @RequestParam String token) {
-        return chucVuService.layCVTheoMa(maCV);
+        return chucVuService.layCVTheoMa(maCV, token);
     }
 
     // API xóa ChucVu
     @DeleteMapping("/XoaChucVu/{maCV}")
     public String xoa(@PathVariable Long maCV, @RequestParam String token) {
-        chucVuService.xoa(maCV);
+        chucVuService.xoa(maCV,token);
         return "Đã xoá chức vụ " + maCV;
     }
 }

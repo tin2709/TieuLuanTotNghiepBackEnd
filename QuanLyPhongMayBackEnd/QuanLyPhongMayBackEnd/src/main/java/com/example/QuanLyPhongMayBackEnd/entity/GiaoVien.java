@@ -1,14 +1,16 @@
 package com.example.QuanLyPhongMayBackEnd.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 @Entity
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Table(name = "giao_vien")
 public class GiaoVien {
 
     @Id
-    @Column(name = "ma_gv")
-    private String maGiaoVien;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)  // Đảm bảo trường tự động tăng
+    private Long maGiaoVien;
 
     @Column(name = "ho_ten")
     private String hoTen;
@@ -23,14 +25,15 @@ public class GiaoVien {
     private String hocVi;
 
     @OneToOne(cascade = CascadeType.MERGE, fetch = FetchType.EAGER)
-    @JoinColumn(name = "ma_gv", referencedColumnName = "ma_tk")
+    @JoinColumn(name = "ma_tk", referencedColumnName = "ma_tk")
     private TaiKhoan taiKhoan;
 
-    @ManyToOne(cascade = CascadeType.PERSIST)
+
+    @OneToOne(cascade = CascadeType.MERGE, fetch = FetchType.EAGER)
     @JoinColumn(name = "maKhoa")
     private Khoa khoa;
 
-    public GiaoVien(String maGiaoVien, String hoTen, String soDienThoai, String email, String hocVi, TaiKhoan taiKhoan,
+    public GiaoVien(Long maGiaoVien, String hoTen, String soDienThoai, String email, String hocVi, TaiKhoan taiKhoan,
                     Khoa khoa) {
         super();
         this.maGiaoVien = maGiaoVien;
@@ -40,6 +43,11 @@ public class GiaoVien {
         this.hocVi = hocVi;
         this.taiKhoan = taiKhoan;
         this.khoa = khoa;
+    }
+
+
+
+    public GiaoVien(String hoTen, String soDienThoai, String email, String hocVi, TaiKhoan taiKhoan, Khoa khoa) {
     }
 
     public GiaoVien(Long maGiaoVien) {
@@ -54,11 +62,11 @@ public class GiaoVien {
     }
 
 
-    public String getMaGiaoVien() {
+    public Long getMaGiaoVien() {
         return maGiaoVien;
     }
 
-    public void setMaGiaoVien(String maGiaoVien) {
+    public void setMaGiaoVien(Long maGiaoVien) {
         this.maGiaoVien = maGiaoVien;
     }
 

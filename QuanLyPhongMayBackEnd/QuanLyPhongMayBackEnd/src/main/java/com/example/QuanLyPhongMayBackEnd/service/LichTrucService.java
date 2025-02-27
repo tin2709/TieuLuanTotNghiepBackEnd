@@ -19,7 +19,10 @@ public class LichTrucService {
     private boolean isUserLoggedIn(String token) {
         return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
     }
-    public LichTruc layLTTheoMa(Long maLich) {
+    public LichTruc layLTTheoMa(Long maLich,String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         LichTruc lichTruc = null;
         Optional<LichTruc> kq = lichTrucRepository.findById(maLich);
         try {
@@ -30,23 +33,38 @@ public class LichTrucService {
         }
     }
 
-    public List<LichTruc> layDSLT() {
+    public List<LichTruc> layDSLT(String token ) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return lichTrucRepository.findAll();
     }
 
-    public void xoa(Long maLich) {
+    public void xoa(Long maLich,String token) {
+        if (!isUserLoggedIn(token)) {
+            return ; // Token không hợp lệ
+        }
         lichTrucRepository.deleteById(maLich);
     }
 
-    public LichTruc luu(LichTruc lichTruc) {
+    public LichTruc luu(LichTruc lichTruc,String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return lichTrucRepository.save(lichTruc);
     }
 
-    public List<LichTruc> layLichTrucTheoMaTang(Long maTang) {
+    public List<LichTruc> layLichTrucTheoMaTang(Long maTang,String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return lichTrucRepository.findByTang_MaTang(maTang);
     }
 
-    public List<Tang> layTangChuaCoNhanVienTrucTrongThang() {
+    public List<Tang> layTangChuaCoNhanVienTrucTrongThang(String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         try {
             // Sử dụng LichTrucRepository để lấy danh sách tầng chưa có nhân viên trực trong tháng hiện tại
             List<Tang> tangChuaCoNhanVienTruc = lichTrucRepository.findTangChuaCoNhanVienTrucTrongThang();
@@ -67,7 +85,10 @@ public class LichTrucService {
         }
     }
 
-    public LichTruc updateLichTruc(LichTruc lichTruc) {
+    public LichTruc updateLichTruc(LichTruc lichTruc,String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         Optional<LichTruc> existingLichTruc = lichTrucRepository.findById(lichTruc.getMaLich());
         if (existingLichTruc.isPresent()) {
             LichTruc updatedLichTruc = existingLichTruc.get();

@@ -39,25 +39,25 @@ public class PhongMayController {
         tang.setMaTang(maTang);  // Assuming Tang has a setMaTang method
         phongMay.setTang(tang);
 
-        return phongMayService.luu(phongMay);
+        return phongMayService.luu(phongMay,token);
     }
 
     @GetMapping("/DSPhongMay")
     public List<PhongMay> layDSPhongMay(@RequestParam String token) {
         // Handle token validation if necessary
-        return phongMayService.layDSPhongMay();
+        return phongMayService.layDSPhongMay(token);
     }
 
     @GetMapping("/DSPhongMaytheoTrangThai/{trangThai}")
     public List<PhongMay> getPhongMaysByTrangThai(@PathVariable String trangThai, @RequestParam String token) {
         // Handle token validation if necessary
-        return phongMayService.findByTrangThai(trangThai);
+        return phongMayService.findByTrangThai(trangThai,token);
     }
 
     @GetMapping("/PhongMay/{maPhong}")
     public PhongMay layPhongMayTheoMa(@PathVariable Long maPhong, @RequestParam String token) {
         // Handle token validation if necessary
-        return phongMayService.layPhongMayTheoMa(maPhong);
+        return phongMayService.layPhongMayTheoMa(maPhong,token);
     }
 
     @DeleteMapping("/XoaPhongMay/{maPhong}")
@@ -90,6 +90,6 @@ public class PhongMayController {
         tang.setMaTang(maTang);  // Assuming Tang has a setMaTang method
         phongMay.setTang(tang);
 
-        return phongMayService.capNhatTheoMa(maPhong, phongMay);
+        return phongMayService.capNhatTheoMa(maPhong, phongMay,token);
     }
 }

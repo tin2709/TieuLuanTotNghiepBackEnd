@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+
 @CrossOrigin
 @RestController
 public class GiaoVienController {
@@ -19,47 +22,74 @@ public class GiaoVienController {
 
     // API lấy danh sách giáo viên
     @GetMapping("/DSGiaoVien")
-    public List<GiaoVien> layDSGV(@RequestParam String token){
-        return giaoVienService.layDSGV();
+    public List<GiaoVien> layDSGV(@RequestParam String token) {
+        List<GiaoVien> giaoVienList = giaoVienService.layDSGV(token);
+        if (giaoVienList == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token không hợp lệ");
+        }
+        return giaoVienList;
     }
 
     // API lấy giáo viên theo mã giáo viên
     @GetMapping("/GiaoVien/{maGiaoVien}")
-    public GiaoVien layGVTheoMa(@PathVariable String maGiaoVien, @RequestParam String token){
-        return giaoVienService.layGVTheoMa(maGiaoVien);
+    public GiaoVien layGVTheoMa(@PathVariable String maGiaoVien, @RequestParam String token) {
+        GiaoVien giaoVien = giaoVienService.layGVTheoMa(maGiaoVien, token);
+        if (giaoVien == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token không hợp lệ hoặc giáo viên không tồn tại");
+        }
+        return giaoVien;
     }
 
     // API thêm mới giáo viên
     @PostMapping("/LuuGiaoVien")
-    public GiaoVien luu(@RequestParam String maGiaoVien,
+    public GiaoVien luu(
                         @RequestParam String hoTen,
                         @RequestParam String soDienThoai,
                         @RequestParam String email,
                         @RequestParam String hocVi,
                         @RequestParam String taiKhoanMaTK,
-                        @RequestParam Long khoaMaKhoa,
+                        @RequestParam String khoaMaKhoa,
                         @RequestParam String token) {
+
+        if (!giaoVienService.isUserLoggedIn(token)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token không hợp lệ");
+        }
 
         // Tạo đối tượng TaiKhoan và Khoa từ các tham số
         TaiKhoan taiKhoan = new TaiKhoan(taiKhoanMaTK);  // Giả sử TaiKhoan có constructor nhận maTK
         Khoa khoa = new Khoa(khoaMaKhoa);  // Giả sử Khoa có constructor nhận maKhoa
 
         // Tạo giáo viên từ các tham số
-        GiaoVien giaoVien = new GiaoVien(maGiaoVien, hoTen, soDienThoai, email, hocVi, taiKhoan, khoa);
+        GiaoVien giaoVien = new GiaoVien();
+        giaoVien.setHoTen(hoTen);
+        giaoVien.setSoDienThoai(soDienThoai);
+        giaoVien.setEmail(email);
+        giaoVien.setHocVi(hocVi);
+        giaoVien.setKhoa(khoa);
+        giaoVien.setTaiKhoan(taiKhoan);
 
-        return giaoVienService.luu(giaoVien);
+
+
+        return giaoVienService.luu(giaoVien, token);
     }
 
     // API xóa giáo viên theo mã giáo viên
     @DeleteMapping("/XoaGiaoVien/{maGiaoVien}")
     public String xoa(@PathVariable String maGiaoVien, @RequestParam String token) {
-        giaoVienService.xoa(maGiaoVien);
+        if (!giaoVienService.isUserLoggedIn(token)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token không hợp lệ");
+        }
+        giaoVienService.xoa(Long.valueOf(maGiaoVien), token);
         return "Đã xoá giáo viên " + maGiaoVien;
     }
 
     // API phân trang danh sách giáo viên
     @GetMapping("/DSGiaoVien/phantang")
     public Page<GiaoVien> layDSGVPhanTrang(@RequestParam int pageNumber, @RequestParam String token) {
-        return giaoVienService.layDSGVPhanTrang(pageNumber);
+        Page<GiaoVien> giaoVienPage = giaoVienService.layDSGVPhanTrang(pageNumber, token);
+        if (giaoVienPage.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token không hợp lệ hoặc không có dữ liệu");
+        }
+        return giaoVienPage;
     }
 }
