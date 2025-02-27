@@ -26,13 +26,13 @@ public class ToaNhaController {
         toaNha.setTenToaNha(tenToaNha);
 
         // Save the ToaNha entity using the service
-        return toaNhaService.luu(toaNha);
+        return toaNhaService.luu(toaNha, token);
     }
 
     @GetMapping("/DSToaNha")
     public List<ToaNha> layDSToaNha(@RequestParam String token) {
         // Handle token validation if needed
-        return toaNhaService.layDSToaNha();
+        return toaNhaService.layDSToaNha(token);
     }
 
     @DeleteMapping("/XoaToaNha/{maToaNha}")
@@ -45,6 +45,6 @@ public class ToaNhaController {
     @GetMapping("/ToaNha/{maToaNha}")
     public ToaNha layToaNhaTheoMa(@PathVariable Long maToaNha, @RequestParam String token) {
         // Handle token validation if needed
-        return toaNhaService.layToaNhaTheoMa(maToaNha);
+        return toaNhaService.layToaNhaTheoMa(maToaNha, token);
     }
 }

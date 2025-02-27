@@ -27,7 +27,10 @@ public class NhanVienService {
     private boolean isUserLoggedIn(String token) {
         return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
     }
-    public NhanVien layNVTheoMa(String maNV) {
+    public NhanVien layNVTheoMa(String maNV,String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         NhanVien nhanVien = null;
         Optional<NhanVien> kq = nhanVienRepository.findById(maNV);
         try {
@@ -38,18 +41,27 @@ public class NhanVienService {
         }
     }
 
-    public List<NhanVien> layDSNV() {
+    public List<NhanVien> layDSNV(String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return nhanVienRepository.findAll();
     }
 
     @Transactional
-    public void xoa(String maNV) {
+    public void xoa(String maNV,String token) {
+        if (!isUserLoggedIn(token)) {
+            return ; // Token không hợp lệ
+        }
         Optional<TaiKhoan> kq = userRepository.findById(maNV);
         TaiKhoan taiKhoan = kq.get();
         userRepository.deleteById(taiKhoan.getMaTK());
     }
 
-    public NhanVien luu(NhanVien nhanVien) {
+    public NhanVien luu(NhanVien nhanVien,String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         if (nhanVien.getTaiKhoan() != null) {
             Optional<TaiKhoan> kq = userRepository.findById(nhanVien.getTaiKhoan().getMaTK());
             TaiKhoan tk = kq.get();
@@ -59,7 +71,10 @@ public class NhanVienService {
     }
 
     // Phương thức phân trang lấy danh sách nhân viên
-    public Page<NhanVien> layDSNVPhanTrang(int pageNumber) {
+    public Page<NhanVien> layDSNVPhanTrang(int pageNumber,String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         Pageable pageable = PageRequest.of(pageNumber, 10);  // Mỗi trang có tối đa 10 nhân viên
         return nhanVienRepository.findAll(pageable);
     }

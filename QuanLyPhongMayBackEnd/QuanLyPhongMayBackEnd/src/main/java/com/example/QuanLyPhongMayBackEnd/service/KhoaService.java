@@ -20,7 +20,10 @@ public class KhoaService {
         return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
     }
 
-    public Khoa layKhoaTheoMa(Long maKhoa) {
+    public Khoa layKhoaTheoMa(Long maKhoa, String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         Khoa khoa = null;
         Optional<Khoa> kq = khoaRepository.findById(maKhoa);
         try {
@@ -31,17 +34,26 @@ public class KhoaService {
         }
     }
 
-    public List<Khoa> layDSKhoa() {
+    public List<Khoa> layDSKhoa(String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return khoaRepository.findAll();
     }
 
 
     @Transactional
-    public void xoa(Long maKhoa) {
+    public void xoa(Long maKhoa, String token) {
+        if (!isUserLoggedIn(token)) {
+            return; // Token không hợp lệ
+        }
         khoaRepository.deleteById(maKhoa);
     }
 
-    public Khoa luu(Khoa khoa) {
+    public Khoa luu(Khoa khoa, String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return khoaRepository.save(khoa);
     }
 

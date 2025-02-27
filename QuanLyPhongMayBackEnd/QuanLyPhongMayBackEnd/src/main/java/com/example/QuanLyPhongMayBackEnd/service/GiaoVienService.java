@@ -21,31 +21,53 @@ public class GiaoVienService {
 
     @Autowired
     private UserRepository userRepository;
+
     @Autowired
     private TaiKhoanService taiKhoanService;
-    private boolean isUserLoggedIn(String token) {
+
+    // Phương thức kiểm tra token
+    public boolean isUserLoggedIn(String token) {
         return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
     }
-    public GiaoVien layGVTheoMa(String maGiaoVien) {
+
+    public GiaoVien layGVTheoMa(String maGiaoVien, String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ, trả về null hoặc có thể throw exception
+        }
         return giaoVienRepository.findById(maGiaoVien).orElse(null);
     }
 
-    public List<GiaoVien> layDSGV() {
+    public List<GiaoVien> layDSGV(String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return giaoVienRepository.findAll();
     }
 
     // Phương thức phân trang lấy danh sách giáo viên
-    public Page<GiaoVien> layDSGVPhanTrang(int pageNumber) {
+    public Page<GiaoVien> layDSGVPhanTrang(int pageNumber, String token) {
+        if (!isUserLoggedIn(token)) {
+            return Page.empty(); // Token không hợp lệ, trả về trang trống
+        }
         Pageable pageable = PageRequest.of(pageNumber, 10); // Mỗi trang sẽ có 10 giáo viên
         return giaoVienRepository.findAll(pageable);
     }
 
     @Transactional
-    public void xoa(String maGiaoVien) {
-        userRepository.findById(maGiaoVien).ifPresent(userRepository::delete);
+    public void xoa(Long maGiaoVien, String token) {
+        if (!isUserLoggedIn(token)) {
+            return; // Token không hợp lệ
+        }
+        // Xóa bản ghi giáo viên có maGiaoVien
+        giaoVienRepository.deleteByMaGiaoVien(maGiaoVien);
     }
 
-    public GiaoVien luu(GiaoVien giaoVien) {
+
+
+    public GiaoVien luu(GiaoVien giaoVien, String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         if (giaoVien.getTaiKhoan() != null) {
             userRepository.findById(giaoVien.getTaiKhoan().getMaTK())
                     .ifPresent(giaoVien::setTaiKhoan);
@@ -53,7 +75,10 @@ public class GiaoVienService {
         return giaoVienRepository.save(giaoVien);
     }
 
-    public GiaoVien capNhat(GiaoVien giaoVien) {
+    public GiaoVien capNhat(GiaoVien giaoVien, String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return giaoVienRepository.save(giaoVien);
     }
 }

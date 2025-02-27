@@ -15,7 +15,7 @@ public class CaThucHanhService {
     @Autowired
     private TaiKhoanService taiKhoanService;
 
-    private boolean isUserLoggedIn(String token) {
+    public boolean isUserLoggedIn(String token) {
         return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
     }
 
@@ -30,9 +30,8 @@ public class CaThucHanhService {
     }
 
     public CaThucHanh layCaThucHanhTheoMa(Long maCaThucHanh, String token) {
-        Map<String, Object> response = checkTokenAndReturnResponse(token);
-        if (response.containsKey("status") && response.get("status").equals("error")) {
-            return null; // If user is not logged in, return null or handle accordingly
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
         }
 
         CaThucHanh caThucHanh = null;
@@ -46,57 +45,50 @@ public class CaThucHanhService {
     }
 
     public List<CaThucHanh> layDSCaThucHanhTheoNgay(Date ngayThucHanh, String token) {
-        Map<String, Object> response = checkTokenAndReturnResponse(token);
-        if (response.containsKey("status") && response.get("status").equals("error")) {
-            return null; // Return empty or null if not logged in
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
         }
         return caThucHanhRepository.findByNgayThucHanh(ngayThucHanh);
     }
 
     public List<CaThucHanh> layDSCaThucHanh(String token) {
-        Map<String, Object> response = checkTokenAndReturnResponse(token);
-        if (response.containsKey("status") && response.get("status").equals("error")) {
-            return null; // Return empty list or null if not logged in
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
         }
         return caThucHanhRepository.findAll();
     }
 
     public void xoa(Long maCaThucHanh, String token) {
-        Map<String, Object> response = checkTokenAndReturnResponse(token);
-        if (response.containsKey("status") && response.get("status").equals("error")) {
-            return; // Do nothing if not logged in
+        if (!isUserLoggedIn(token)) {
+            return;
         }
         caThucHanhRepository.deleteById(maCaThucHanh);
     }
 
     public List<CaThucHanh> layDSCaThucHanhTheoMonHoc(Long maMon, String token) {
-        Map<String, Object> response = checkTokenAndReturnResponse(token);
-        if (response.containsKey("status") && response.get("status").equals("error")) {
-            return null; // Return empty list or null if not logged in
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
         }
         return caThucHanhRepository.findByMonHoc_MaMon(maMon);
     }
 
     public CaThucHanh capNhat(CaThucHanh caThucHanh, String token) {
-        Map<String, Object> response = checkTokenAndReturnResponse(token);
-        if (response.containsKey("status") && response.get("status").equals("error")) {
-            return null; // Return null if not logged in
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
         }
         return caThucHanhRepository.save(caThucHanh);
     }
 
     public CaThucHanh luu(CaThucHanh caThucHanh, String token) {
-        Map<String, Object> response = checkTokenAndReturnResponse(token);
-        if (response.containsKey("status") && response.get("status").equals("error")) {
-            return null; // Return null if not logged in
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
         }
         return caThucHanhRepository.save(caThucHanh);
     }
 
     public List<CaThucHanh> layDSCaThucHanhTheoMaPhong(Long maPhong, String token) {
-        Map<String, Object> response = checkTokenAndReturnResponse(token);
-        if (response.containsKey("status") && response.get("status").equals("error")) {
-            return null; // Return empty list or null if not logged in
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
         }
         return caThucHanhRepository.findByPhongMay_MaPhong(maPhong);
     }

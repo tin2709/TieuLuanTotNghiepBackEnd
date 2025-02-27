@@ -29,25 +29,25 @@ public class MonHocController {
         monHoc.setSoBuoi(soBuoi);
 
         // Lưu môn học
-        return monHocService.luu(monHoc);
+        return monHocService.luu(monHoc, token);
     }
 
     // API lấy danh sách môn học
     @GetMapping("/DSMonHoc")
     public List<MonHoc> layDSMonHoc(@RequestParam String token) {
-        return monHocService.layDSMonHoc();
+        return monHocService.layDSMonHoc(token);
     }
 
     // API xóa môn học theo mã môn
     @DeleteMapping("/XoaMonHoc/{maMon}")
     public String xoa(@PathVariable Long maMon, @RequestParam String token) {
-        monHocService.xoa(maMon);
+        monHocService.xoa(maMon,token);
         return "Đã xoá môn học với mã " + maMon;
     }
 
     // API lấy môn học theo mã môn
     @GetMapping("/MonHoc/{maMon}")
     public MonHoc layMonHocTheoMa(@PathVariable Long maMon, @RequestParam String token) {
-        return monHocService.layMonHocTheoMa(maMon);
+        return monHocService.layMonHocTheoMa(maMon,token);
     }
 }

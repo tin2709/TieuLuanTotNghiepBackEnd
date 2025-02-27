@@ -24,19 +24,19 @@ public class QuyenController {
         quyen.setTenQuyen(tenQuyen);
 
         // Assuming token validation is handled before calling the service
-        return quyenService.luu(quyen);
+        return quyenService.luu(quyen, token);
     }
 
     @GetMapping("/DSQuyen")
     public List<Quyen> layDSQuyen(@RequestParam String token) {
         // Handle token validation if necessary
-        return quyenService.layDSQuyen();
+        return quyenService.layDSQuyen(token);
     }
 
     @DeleteMapping("/XoaQuyen/{maQuyen}")
     public String xoa(@PathVariable Long maQuyen, @RequestParam String token) {
         // Handle token validation if necessary
-        quyenService.xoa(maQuyen);
+        quyenService.xoa(maQuyen, token);
         return "Đã xoá quyền " + maQuyen;
     }
 }

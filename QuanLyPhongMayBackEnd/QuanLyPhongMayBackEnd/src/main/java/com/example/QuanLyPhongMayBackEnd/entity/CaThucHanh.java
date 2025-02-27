@@ -11,7 +11,6 @@ public class CaThucHanh {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ma_ca")
     private Long maCa;
 
     @Column(name = "ngay_thuc_hanh")

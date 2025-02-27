@@ -17,7 +17,10 @@ public class ChucVuService {
     private boolean isUserLoggedIn(String token) {
         return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
     }
-    public ChucVu layCVTheoMa(Long maCV) {
+    public ChucVu layCVTheoMa(Long maCV, String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         ChucVu chucVu = null;
         Optional<ChucVu> kq = chucVuRepository.findById(maCV);
         try {
@@ -28,15 +31,24 @@ public class ChucVuService {
         }
     }
 
-    public List<ChucVu> layDSCV() {
+    public List<ChucVu> layDSCV(String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return chucVuRepository.findAll();
     }
 
-    public void xoa(Long maCV) {
+    public void xoa(Long maCV, String token) {
+        if (!isUserLoggedIn(token)) {
+            return; // Token không hợp lệ
+        }
         chucVuRepository.deleteById(maCV);
     }
 
-    public ChucVu luu(ChucVu chucVu) {
+    public ChucVu luu(ChucVu chucVu, String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
         return chucVuRepository.save(chucVu);
     }
 }

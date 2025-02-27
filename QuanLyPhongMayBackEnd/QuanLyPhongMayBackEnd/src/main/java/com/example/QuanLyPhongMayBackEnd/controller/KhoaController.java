@@ -20,25 +20,25 @@ public class KhoaController {
                     @RequestParam String tenKhoa,
                     @RequestParam String token) {
         Khoa khoa = new Khoa(maKhoa, tenKhoa);
-        return khoaService.luu(khoa);
+        return khoaService.luu(khoa, token);
     }
 
     // API lấy danh sách khoa
     @GetMapping("/DSKhoa")
     public List<Khoa> layDSKhoa(@RequestParam String token) {
-        return khoaService.layDSKhoa();
+        return khoaService.layDSKhoa(token);
     }
 
     // API lấy khoa theo mã khoa
     @GetMapping("/Khoa/{maKhoa}")
     public Khoa layKhoaTheoMa(@PathVariable Long maKhoa, @RequestParam String token) {
-        return khoaService.layKhoaTheoMa(maKhoa);
+        return khoaService.layKhoaTheoMa(maKhoa, token);
     }
 
     // API xóa khoa theo mã khoa
     @DeleteMapping("/XoaKhoa/{maKhoa}")
     public String xoa(@PathVariable Long maKhoa, @RequestParam String token) {
-        khoaService.xoa(maKhoa);
+        khoaService.xoa(maKhoa, token);
         return "Đã xoá khoa " + maKhoa;
     }
 }

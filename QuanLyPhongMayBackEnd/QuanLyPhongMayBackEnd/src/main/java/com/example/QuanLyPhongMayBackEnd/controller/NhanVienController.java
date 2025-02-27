@@ -18,19 +18,19 @@ public class NhanVienController {
     // API phân trang lấy danh sách nhân viên
     @GetMapping("/DSNhanVienPhanTrang")
     public Page<NhanVien> layDSNVPhanTrang(@RequestParam int pageNumber, @RequestParam String token) {
-        return nhanVienService.layDSNVPhanTrang(pageNumber);
+        return nhanVienService.layDSNVPhanTrang(pageNumber,token);
     }
 
     // API lấy danh sách nhân viên
     @GetMapping("/DSNhanVien")
     public List<NhanVien> layDSNV(@RequestParam String token) {
-        return nhanVienService.layDSNV();
+        return nhanVienService.layDSNV(token);
     }
 
     // API lấy nhân viên theo mã
     @GetMapping("/NhanVien/{maNV}")
     public NhanVien layNVTheoMa(@PathVariable String maNV, @RequestParam String token) {
-        return nhanVienService.layNVTheoMa(maNV);
+        return nhanVienService.layNVTheoMa(maNV,token);
     }
 
     // API lưu nhân viên
@@ -52,13 +52,13 @@ public class NhanVienController {
         // ChucVu chucVu = chucVuService.layChucVuTheoMa(maCV);
         // nhanVien.setChucVu(chucVu);
 
-        return nhanVienService.luu(nhanVien);
+        return nhanVienService.luu(nhanVien,token);
     }
 
     // API xóa nhân viên theo mã nhân viên
     @DeleteMapping("/XoaNhanVien/{maNV}")
     public String xoa(@PathVariable String maNV, @RequestParam String token) {
-        nhanVienService.xoa(maNV);
+        nhanVienService.xoa(maNV,token);
         return "Đã xoá nhân viên " + maNV;
     }
 }
