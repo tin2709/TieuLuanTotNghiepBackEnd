@@ -66,13 +66,13 @@ public class TaiKhoanController {
 //    }
     @PostMapping("/luutaikhoan")
     public String luuTaiKhoan(
-            @RequestParam String maTK,
+
             @RequestParam String tenDangNhap,
             @RequestParam String matKhau,
             @RequestParam String email,  // New parameter for email
             @RequestParam(required = false) MultipartFile imageFile,  // Handle the image file
-            @RequestParam String quyen,  // Assuming quyen is a string for the role ID
-            @RequestParam String tenQuyen) throws IOException {  // New parameter for the role name
+            @RequestParam String maQuyen  // Assuming quyen is a string for the role ID
+            ) throws IOException {  // New parameter for the role name
 
         // Check if email is already taken
         if (taiKhoanRepository.findByEmail(email).isPresent()) {
@@ -81,17 +81,15 @@ public class TaiKhoanController {
 
         // Create a new TaiKhoan instance and set values
         TaiKhoan taiKhoan = new TaiKhoan();
-        taiKhoan.setMaTK(maTK);
         taiKhoan.setTenDangNhap(tenDangNhap);
         taiKhoan.setMatKhau(matKhau);
         taiKhoan.setEmail(email);
 
         // Map 'quyen' to 'Quyen' object
-        Quyen quyenObj = new Quyen();
-        quyenObj.setMaQuyen(Long.valueOf(quyen));  // Set the permission ID
-        quyenObj.setTenQuyen(tenQuyen);  // Set the role name (newly added)
+        Quyen quyen = new Quyen(maQuyen);
 
-        taiKhoan.setQuyen(quyenObj);
+
+        taiKhoan.setQuyen(quyen);
 
         // Encrypt the password before saving
         String encodedPassword = passwordEncoder.encode(taiKhoan.getMatKhau());

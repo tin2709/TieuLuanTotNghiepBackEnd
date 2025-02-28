@@ -69,11 +69,13 @@ public class GiaoVienService {
             return null; // Token không hợp lệ
         }
         if (giaoVien.getTaiKhoan() != null) {
-            userRepository.findById(giaoVien.getTaiKhoan().getMaTK())
+            // Convert the Long value to String before passing it to findById
+            userRepository.findById(String.valueOf(giaoVien.getTaiKhoan().getMaTK()))
                     .ifPresent(giaoVien::setTaiKhoan);
         }
         return giaoVienRepository.save(giaoVien);
     }
+
 
     public GiaoVien capNhat(GiaoVien giaoVien, String token) {
         if (!isUserLoggedIn(token)) {

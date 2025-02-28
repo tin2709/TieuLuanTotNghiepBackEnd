@@ -55,7 +55,7 @@ public class NhanVienService {
         }
         Optional<TaiKhoan> kq = userRepository.findById(maNV);
         TaiKhoan taiKhoan = kq.get();
-        userRepository.deleteById(taiKhoan.getMaTK());
+        userRepository.deleteById(String.valueOf(taiKhoan.getMaTK()));
     }
 
     public NhanVien luu(NhanVien nhanVien,String token) {
@@ -63,7 +63,7 @@ public class NhanVienService {
             return null; // Token không hợp lệ
         }
         if (nhanVien.getTaiKhoan() != null) {
-            Optional<TaiKhoan> kq = userRepository.findById(nhanVien.getTaiKhoan().getMaTK());
+            Optional<TaiKhoan> kq = userRepository.findById(String.valueOf(nhanVien.getTaiKhoan().getMaTK()));
             TaiKhoan tk = kq.get();
             nhanVien.setTaiKhoan(tk);
         }
