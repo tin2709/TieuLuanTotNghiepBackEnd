@@ -1,6 +1,7 @@
 package com.example.QuanLyPhongMayBackEnd.entity;
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
@@ -9,12 +10,15 @@ import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "tai_khoan")
-@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "maTK")
+//@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "maTK")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class TaiKhoan {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ma_tk")
-    private String maTK;
+
+    private Long maTK;
 
     @Column(name = "ten_dang_nhap", columnDefinition = "nvarchar(255) UNIQUE")
     @NotBlank(message = "Tên đăng nhập không được để trống")
@@ -26,9 +30,10 @@ public class TaiKhoan {
     @Size(min = 6, message = "Mật khẩu phải có ít nhất 6 ký tự")
     private String matKhau;
 
-    @ManyToOne(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.EAGER)
     @JoinColumn(name = "ma_quyen")
     private Quyen quyen;
+
 
     @Column(name = "email", unique = true)
     @NotBlank(message = "Email không được để trống")
@@ -38,13 +43,13 @@ public class TaiKhoan {
     @Column(name = "image")
     private String image;
 
-    public TaiKhoan(String taiKhoanMaTK) {
+    public TaiKhoan(Long taiKhoanMaTK) {
         this.maTK = taiKhoanMaTK;
     }
 
     // Getter and Setter methods
-    public String getMaTK() { return maTK; }
-    public void setMaTK(String maTK) { this.maTK = maTK; }
+    public Long getMaTK() { return maTK; }
+    public void setMaTK(Long maTK) { this.maTK = maTK; }
 
     public String getTenDangNhap() { return tenDangNhap; }
     public void setTenDangNhap(String tenDangNhap) { this.tenDangNhap = tenDangNhap; }
@@ -62,7 +67,7 @@ public class TaiKhoan {
     public void setImage(String image) { this.image = image; }
 
     // Constructor
-    public TaiKhoan(String maTK, String tenDangNhap, String matKhau, Quyen quyen, String email, String image) {
+    public TaiKhoan(Long maTK, String tenDangNhap, String matKhau, Quyen quyen, String email, String image) {
         this.maTK = maTK;
         this.tenDangNhap = tenDangNhap;
         this.matKhau = matKhau;

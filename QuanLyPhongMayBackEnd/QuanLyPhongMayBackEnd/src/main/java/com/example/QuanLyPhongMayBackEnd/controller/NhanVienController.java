@@ -35,7 +35,7 @@ public class NhanVienController {
 
     // API lưu nhân viên
     @PostMapping("/LuuNhanVien")
-    public NhanVien luu(@RequestParam String maNV,
+    public NhanVien luu(@RequestParam Long maNV,
                         @RequestParam String tenNV,
                         @RequestParam String email,
                         @RequestParam String sDT,

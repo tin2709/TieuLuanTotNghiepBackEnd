@@ -13,6 +13,11 @@ public class Quyen {
     @Column(name = "ten_quyen", columnDefinition = "nvarchar(50)" , nullable = false)
     private String tenQuyen;
 
+    public Quyen(String maQuyen) {
+        this.maQuyen = Long.valueOf(maQuyen);
+    }
+
+
     public Long getMaQuyen() {
         return maQuyen;
     }

@@ -47,7 +47,7 @@ public class GiaoVienController {
                         @RequestParam String soDienThoai,
                         @RequestParam String email,
                         @RequestParam String hocVi,
-                        @RequestParam String taiKhoanMaTK,
+                        @RequestParam Long taiKhoanMaTK,
                         @RequestParam String khoaMaKhoa,
                         @RequestParam String token) {
 
