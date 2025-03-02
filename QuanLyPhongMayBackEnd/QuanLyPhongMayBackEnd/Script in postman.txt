@@ -1,0 +1,23 @@
+pm.test("Save token after successful login", function () {
+    var jsonData = pm.response.json();
+    console.log(jsonData);
+
+    // Kiểm tra xem response có chứa token hay không
+    if (jsonData && jsonData.token) {
+        var token = jsonData.token;
+
+        // Lưu giá trị token vào các biến
+        pm.environment.set("token", token);
+        pm.globals.set("token", token);
+
+        // Nếu bạn muốn lưu vào Collection Variables (thường ít dùng)
+        // pm.collectionVariables.set("token", token);
+
+        // Lưu token vào Vault (nếu bạn sử dụng Vault)
+        // pm.variables.set("token", token); // Để lưu vào Vault, bạn cần sử dụng pm.variables
+
+        console.log("Token has been saved to variables.");
+    } else {
+        console.log("Token not found in response.");
+    }
+});
