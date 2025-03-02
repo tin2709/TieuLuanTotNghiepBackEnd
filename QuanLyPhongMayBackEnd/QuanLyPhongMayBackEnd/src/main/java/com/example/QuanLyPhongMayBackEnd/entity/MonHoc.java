@@ -21,6 +21,9 @@ public class MonHoc {
     @Column(name = "ngay_bat_dau")
     private Date ngayBatDau;
 
+    @Column(name = "ngay_ket_thuc")  // New column
+    private Date ngayKetThuc;  // New property
+
     @Column(name = "so_buoi")
     private int soBuoi;
 
@@ -54,6 +57,14 @@ public class MonHoc {
     public void setNgayBatDau(Date ngayBatDau) {
         this.ngayBatDau = ngayBatDau;
     }
+    public Date getNgayKetThuc() {
+        return ngayKetThuc;
+    }
+
+    public void setNgayKetThuc(Date ngayKetThuc) {
+        this.ngayKetThuc = ngayKetThuc;
+    }
+
 
     public int getSoBuoi() {
         return soBuoi;
@@ -71,12 +82,12 @@ public class MonHoc {
         this.caThucHanhs = caThucHanhs;
     }
 
-    public MonHoc(Long maMon, String tenMon, Date ngayBatDau, int soBuoi, List<CaThucHanh> caThucHanhs) {
-        super();
+    public MonHoc(Long maMon, String tenMon, Date ngayBatDau, int soBuoi, Date ngayKetThuc, List<CaThucHanh> caThucHanhs) {
         this.maMon = maMon;
         this.tenMon = tenMon;
         this.ngayBatDau = ngayBatDau;
         this.soBuoi = soBuoi;
+        this.ngayKetThuc = ngayKetThuc;
         this.caThucHanhs = caThucHanhs;
     }
 
@@ -87,10 +98,13 @@ public class MonHoc {
 
     @Override
     public String toString() {
-        return "MonHoc [maMon=" + maMon + ", tenMon=" + tenMon + ", ngayBatDau=" + ngayBatDau + ", soBuoi="
-                + soBuoi + ", caThucHanhs=" + caThucHanhs + "]";
+        return "MonHoc{" +
+                "maMon=" + maMon +
+                ", tenMon='" + tenMon + '\'' +
+                ", ngayBatDau=" + ngayBatDau +
+                ", ngayKetThuc=" + ngayKetThuc +
+                ", soBuoi=" + soBuoi +
+                ", caThucHanhs=" + caThucHanhs +
+                '}';
     }
-
-
-
 }
