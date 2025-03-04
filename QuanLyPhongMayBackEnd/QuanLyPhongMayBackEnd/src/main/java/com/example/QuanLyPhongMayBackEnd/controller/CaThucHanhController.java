@@ -1,5 +1,6 @@
 package com.example.QuanLyPhongMayBackEnd.controller;
 
+import com.example.QuanLyPhongMayBackEnd.DTO.CaThucHanhDTO;
 import com.example.QuanLyPhongMayBackEnd.entity.CaThucHanh;
 import com.example.QuanLyPhongMayBackEnd.entity.GiaoVien;
 import com.example.QuanLyPhongMayBackEnd.entity.MonHoc;
@@ -12,9 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 @RestController
 @CrossOrigin
@@ -142,4 +141,31 @@ public class CaThucHanhController {
         caThucHanhService.xoa(maCaThucHanh, token);
         return new ResponseEntity<>("Đã xoá ca thực hành với mã " + maCaThucHanh, HttpStatus.OK);
     }
+    @GetMapping("/searchCaThucHanh")
+    public ResponseEntity<Map<String, Object>> timKiemCaThucHanh(@RequestParam String keyword, @RequestParam String token) {
+        if (!caThucHanhService.isUserLoggedIn(token)) {
+            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        }
+
+        // Kiểm tra nếu keyword hợp lệ
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);  // Trả về lỗi nếu keyword trống
+        }
+
+        // Tìm kiếm và lấy kết quả
+        List<CaThucHanhDTO> dsCaThucHanh = caThucHanhService.timKiemCaThucHanh(keyword, token);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("results", dsCaThucHanh);
+        response.put("size", dsCaThucHanh.size());  // Thêm kích thước vào kết quả
+
+        if (dsCaThucHanh == null || dsCaThucHanh.isEmpty()) {
+            return new ResponseEntity<>(response, HttpStatus.NO_CONTENT);
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+
+
 }
