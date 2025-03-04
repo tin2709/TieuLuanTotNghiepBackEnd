@@ -1,11 +1,17 @@
 package com.example.QuanLyPhongMayBackEnd.service;
 
+import com.example.QuanLyPhongMayBackEnd.DTO.CaThucHanhDTO;
 import com.example.QuanLyPhongMayBackEnd.entity.CaThucHanh;
 import com.example.QuanLyPhongMayBackEnd.repository.CaThucHanhRepository;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class CaThucHanhService {
@@ -92,4 +98,80 @@ public class CaThucHanhService {
         }
         return caThucHanhRepository.findByPhongMay_MaPhong(maPhong);
     }
+    public List<CaThucHanhDTO> timKiemCaThucHanh(String keyword, String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
+
+        // Phân tích keyword thành cột và giá trị
+        String[] parts = keyword.split(":");
+        if (parts.length != 2) {
+            return null; // Nếu không có dấu ":" hoặc có quá nhiều, trả về null
+        }
+
+        String column = parts[0].trim(); // Cột cần tìm
+        String value = parts[1].trim();  // Giá trị cần tìm
+
+        // Kiểm tra xem cột có hợp lệ không
+        List<String> validColumns = Arrays.asList("ten_ca", "ngay_thuc_hanh", "tiet_bat_dau", "tiet_ket_thuc", "buoi_so");
+        if (!validColumns.contains(column)) {
+            return null; // Nếu cột không hợp lệ, trả về null
+        }
+
+        // Xây dựng Specification để tìm kiếm động
+        Specification<CaThucHanh> specification = (root, query, criteriaBuilder) -> {
+            switch (column) {
+                case "ten_ca":
+                    return criteriaBuilder.like(root.get("tenCa"), "%" + value + "%");
+                case "ngay_thuc_hanh":
+                    return criteriaBuilder.like(root.get("ngayThucHanh"), "%" + value + "%");
+                case "tiet_bat_dau":
+                    try {
+                        // Kiểm tra nếu value có phải là số hợp lệ
+                        int tietBatDau = Integer.parseInt(value);
+                        return criteriaBuilder.equal(root.get("tietBatDau"), tietBatDau);
+                    } catch (NumberFormatException e) {
+                        return null; // Trả về null nếu value không phải là số hợp lệ
+                    }
+                case "tiet_ket_thuc":
+                    try {
+                        // Kiểm tra nếu value có phải là số hợp lệ
+                        int tietKetThuc = Integer.parseInt(value);
+                        return criteriaBuilder.equal(root.get("tietKetThuc"), tietKetThuc);
+                    } catch (NumberFormatException e) {
+                        return null; // Trả về null nếu value không phải là số hợp lệ
+                    }
+                case "buoi_so":
+                    // Kiểm tra nếu value có phải là số hợp lệ
+                    try {
+                        int buoiSo = Integer.parseInt(value);
+                        return criteriaBuilder.equal(root.get("buoiSo"), buoiSo);
+                    } catch (NumberFormatException e) {
+                        return criteriaBuilder.like(root.get("buoiSo"), "%" + value + "%");
+                    }
+                default:
+                    return null;
+            }
+        };
+
+        // Truy vấn danh sách các CaThucHanh
+        List<CaThucHanh> results = caThucHanhRepository.findAll(specification);
+
+        // Chuyển kết quả thành DTO
+        return results.stream()
+                .map(caThucHanh -> new CaThucHanhDTO(
+                        caThucHanh.getMaCa(),
+                        caThucHanh.getNgayThucHanh(),
+                        caThucHanh.getTenCa(),
+                        caThucHanh.getTietBatDau(),
+                        caThucHanh.getTietKetThuc(),
+                        caThucHanh.getBuoiSo()))
+                .collect(Collectors.toList());
+    }
+
+
+
+
+
+
 }

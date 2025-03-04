@@ -33,6 +33,13 @@ public class GlobalRateLimitingFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+        // Bypass rate limiting for Swagger UI requests
+        String requestURI = request.getRequestURI();
+        if (requestURI.contains("/swagger-ui/") || requestURI.contains("/swagger-resources/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         // Kiểm tra nếu lượng yêu cầu đã vượt quá giới hạn
         if (!bucket.tryConsume(1)) {
             // Trả về mã lỗi 429 (TOO MANY REQUESTS)
@@ -40,6 +47,8 @@ public class GlobalRateLimitingFilter extends OncePerRequestFilter {
             response.getWriter().write("You have exceeded the rate limit. Please try again later.");
             return; // Ngừng tiếp tục chuỗi bộ lọc
         }
+
         filterChain.doFilter(request, response); // Tiếp tục chuỗi bộ lọc nếu chưa vượt quá giới hạn
     }
+
 }
