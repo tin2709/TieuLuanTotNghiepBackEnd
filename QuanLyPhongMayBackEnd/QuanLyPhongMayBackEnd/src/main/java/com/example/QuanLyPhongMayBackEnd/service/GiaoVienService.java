@@ -1,5 +1,6 @@
 package com.example.QuanLyPhongMayBackEnd.service;
 
+import com.example.QuanLyPhongMayBackEnd.DTO.GiaoVienDTO;
 import com.example.QuanLyPhongMayBackEnd.entity.GiaoVien;
 import com.example.QuanLyPhongMayBackEnd.repository.GiaoVienRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.UserRepository;
@@ -7,11 +8,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
+
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class GiaoVienService {
@@ -83,4 +88,56 @@ public class GiaoVienService {
         }
         return giaoVienRepository.save(giaoVien);
     }
+    public List<GiaoVienDTO> timKiemGiaoVien(String keyword, String token) {
+        // Ensure the user is logged in (you can implement token verification here)
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
+
+        // Split the keyword into column and value
+        String[] parts = keyword.split(":");
+        if (parts.length != 2) {
+            return null; // Invalid keyword format
+        }
+
+        String column = parts[0].trim();
+        String value = parts[1].trim();
+
+        // Define valid columns for search
+        List<String> validColumns = Arrays.asList("ho_ten", "so_dien_thoai", "email", "hoc_vi");
+        if (!validColumns.contains(column)) {
+            return null; // Invalid column name
+        }
+
+        // Build the Specification for dynamic search
+        Specification<GiaoVien> specification = (root, query, criteriaBuilder) -> {
+            switch (column) {
+                case "ho_ten":
+                    return criteriaBuilder.like(root.get("hoTen"), "%" + value + "%");
+                case "so_dien_thoai":
+                    return criteriaBuilder.like(root.get("soDienThoai"), "%" + value + "%");
+                case "email":
+                    return criteriaBuilder.like(root.get("email"), "%" + value + "%");
+                case "hoc_vi":
+                    return criteriaBuilder.like(root.get("hocVi"), "%" + value + "%");
+                default:
+                    return null;
+            }
+        };
+
+        // Query the database using the Specification
+        List<GiaoVien> results = giaoVienRepository.findAll(specification);
+
+        // Map results to DTOs
+        return results.stream()
+                .map(giaoVien -> new GiaoVienDTO(
+                        giaoVien.getMaGiaoVien(),
+                        giaoVien.getHoTen(),
+                        giaoVien.getSoDienThoai(),
+                        giaoVien.getEmail(),
+                        giaoVien.getHocVi()
+                ))
+                .collect(Collectors.toList());
+    }
+
 }

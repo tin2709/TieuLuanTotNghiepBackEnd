@@ -1,5 +1,6 @@
 package com.example.QuanLyPhongMayBackEnd.controller;
 
+import com.example.QuanLyPhongMayBackEnd.DTO.PhongMayDTO;
 import com.example.QuanLyPhongMayBackEnd.entity.PhongMay;
 import com.example.QuanLyPhongMayBackEnd.entity.Tang;
 import com.example.QuanLyPhongMayBackEnd.service.PhongMayService;
@@ -9,7 +10,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @CrossOrigin
@@ -91,5 +94,29 @@ public class PhongMayController {
         phongMay.setTang(tang);
 
         return phongMayService.capNhatTheoMa(maPhong, phongMay,token);
+    }
+    @GetMapping("/searchPhongMay")
+    public ResponseEntity<Map<String, Object>> searchPhongMay(@RequestParam String keyword, @RequestParam String token) {
+        if (!phongMayService.isUserLoggedIn(token)) {
+            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        }
+
+        // Validate the keyword
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+
+        // Perform the search
+        List<PhongMayDTO> results = phongMayService.timKiemPhongMay(keyword, token);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("results", results);
+        response.put("size", results.size());
+
+        if (results == null || results.isEmpty()) {
+            return new ResponseEntity<>(response, HttpStatus.NO_CONTENT);
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

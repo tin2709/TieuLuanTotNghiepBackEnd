@@ -1,12 +1,17 @@
 package com.example.QuanLyPhongMayBackEnd.controller;
 
+import com.example.QuanLyPhongMayBackEnd.DTO.NhanVienDTO;
 import com.example.QuanLyPhongMayBackEnd.entity.NhanVien;
 import com.example.QuanLyPhongMayBackEnd.service.NhanVienService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @CrossOrigin
@@ -60,5 +65,29 @@ public class NhanVienController {
     public String xoa(@PathVariable String maNV, @RequestParam String token) {
         nhanVienService.xoa(maNV,token);
         return "Đã xoá nhân viên " + maNV;
+    }
+    @GetMapping("/searchNhanVien")
+    public ResponseEntity<Map<String, Object>> searchNhanVien(@RequestParam String keyword, @RequestParam String token) {
+        if (!nhanVienService.isUserLoggedIn(token)) {
+            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        }
+
+        // Validate the keyword
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+
+        // Perform the search
+        List<NhanVienDTO> results = nhanVienService.timKiemNhanVien(keyword, token);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("results", results);
+        response.put("size", results.size());
+
+        if (results == null || results.isEmpty()) {
+            return new ResponseEntity<>(response, HttpStatus.NO_CONTENT);
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }
