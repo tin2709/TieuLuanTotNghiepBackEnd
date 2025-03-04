@@ -1,14 +1,18 @@
 package com.example.QuanLyPhongMayBackEnd.controller;
 
+import com.example.QuanLyPhongMayBackEnd.DTO.GiaoVienDTO;
 import com.example.QuanLyPhongMayBackEnd.entity.GiaoVien;
 import com.example.QuanLyPhongMayBackEnd.entity.Khoa;
 import com.example.QuanLyPhongMayBackEnd.entity.TaiKhoan;
 import com.example.QuanLyPhongMayBackEnd.service.GiaoVienService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -91,5 +95,29 @@ public class GiaoVienController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token không hợp lệ hoặc không có dữ liệu");
         }
         return giaoVienPage;
+    }
+    @GetMapping("/searchGiaoVien")
+    public ResponseEntity<Map<String, Object>> searchGiaoVien(@RequestParam String keyword, @RequestParam String token) {
+        if (!giaoVienService.isUserLoggedIn(token)) {
+            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        }
+
+        // Validate the keyword
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+
+        // Perform the search
+        List<GiaoVienDTO> results = giaoVienService.timKiemGiaoVien(keyword, token);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("results", results);
+        response.put("size", results.size());
+
+        if (results == null || results.isEmpty()) {
+            return new ResponseEntity<>(response, HttpStatus.NO_CONTENT);
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

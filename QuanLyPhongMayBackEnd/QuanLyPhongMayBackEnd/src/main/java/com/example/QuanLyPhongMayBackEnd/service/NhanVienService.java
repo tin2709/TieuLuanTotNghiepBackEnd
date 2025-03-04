@@ -1,5 +1,6 @@
 package com.example.QuanLyPhongMayBackEnd.service;
 
+import com.example.QuanLyPhongMayBackEnd.DTO.NhanVienDTO;
 import com.example.QuanLyPhongMayBackEnd.entity.NhanVien;
 import com.example.QuanLyPhongMayBackEnd.entity.TaiKhoan;
 import com.example.QuanLyPhongMayBackEnd.repository.NhanVienRepository;
@@ -9,10 +10,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class NhanVienService {
@@ -24,7 +28,7 @@ public class NhanVienService {
     private UserRepository userRepository;
     @Autowired
     private TaiKhoanService taiKhoanService;
-    private boolean isUserLoggedIn(String token) {
+    public boolean isUserLoggedIn(String token) {
         return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
     }
     public NhanVien layNVTheoMa(String maNV,String token) {
@@ -77,5 +81,53 @@ public class NhanVienService {
         }
         Pageable pageable = PageRequest.of(pageNumber, 10);  // Mỗi trang có tối đa 10 nhân viên
         return nhanVienRepository.findAll(pageable);
+    }
+    public List<NhanVienDTO> timKiemNhanVien(String keyword, String token) {
+        // Ensure the user is logged in (you can implement token verification here)
+        if (!isUserLoggedIn(token)) {
+            return null; // Invalid token
+        }
+
+        // Split the keyword into column and value
+        String[] parts = keyword.split(":");
+        if (parts.length != 2) {
+            return null; // Invalid keyword format
+        }
+
+        String column = parts[0].trim();
+        String value = parts[1].trim();
+
+        // Define valid columns for search
+        List<String> validColumns = Arrays.asList("ten_nv", "email", "sdt");
+        if (!validColumns.contains(column)) {
+            return null; // Invalid column name
+        }
+
+        // Build the Specification for dynamic search
+        Specification<NhanVien> specification = (root, query, criteriaBuilder) -> {
+            switch (column) {
+                case "ten_nv":
+                    return criteriaBuilder.like(root.get("tenNV"), "%" + value + "%");
+                case "email":
+                    return criteriaBuilder.like(root.get("email"), "%" + value + "%");
+                case "sdt":
+                    return criteriaBuilder.like(root.get("sDT"), "%" + value + "%");
+                default:
+                    return null;
+            }
+        };
+
+        // Query the database using the Specification
+        List<NhanVien> results = nhanVienRepository.findAll(specification);
+
+        // Map results to DTOs
+        return results.stream()
+                .map(nv -> new NhanVienDTO(
+                        nv.getMaNV(),
+                        nv.getTenNV(),
+                        nv.getEmail(),
+                        nv.getsDT()
+                ))
+                .collect(Collectors.toList());
     }
 }
