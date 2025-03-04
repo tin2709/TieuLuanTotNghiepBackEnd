@@ -4,7 +4,9 @@ import com.example.QuanLyPhongMayBackEnd.entity.ToaNha;
 import com.example.QuanLyPhongMayBackEnd.service.ToaNhaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -46,5 +48,21 @@ public class ToaNhaController {
     public ToaNha layToaNhaTheoMa(@PathVariable Long maToaNha, @RequestParam String token) {
         // Handle token validation if needed
         return toaNhaService.layToaNhaTheoMa(maToaNha, token);
+    }
+    @PostMapping("/ImportToaNha")
+    public String importToaNhaFromCSV(@RequestParam("file") MultipartFile file, @RequestParam String token) throws IOException {
+        // Kiểm tra token hợp lệ
+        if (!toaNhaService.isUserLoggedIn(token)) {
+            return "Token không hợp lệ!";
+        }
+
+        // Đọc dữ liệu từ file CSV và xử lý
+        try {
+            // Chuyển file CSV thành danh sách đối tượng ToaNha và lưu vào cơ sở dữ liệu
+            toaNhaService.importCSVFile(file);
+            return "Import thành công!";
+        } catch (Exception e) {
+            return "Có lỗi xảy ra trong quá trình import: " + e.getMessage();
+        }
     }
 }

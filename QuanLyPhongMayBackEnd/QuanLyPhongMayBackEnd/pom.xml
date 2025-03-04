@@ -31,6 +31,35 @@
 			<scope>runtime</scope>
 			<optional>true</optional>
 		</dependency>
+		<dependency>
+			<groupId>org.springframework.batch</groupId>
+			<artifactId>spring-batch-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-batch</artifactId>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.springframework.batch/spring-batch-core -->
+<!--		<dependency>-->
+<!--			<groupId>org.springframework.batch</groupId>-->
+<!--			<artifactId>spring-batch-core</artifactId>-->
+<!--			<version>5.0.0</version> &lt;!&ndash; Hoặc phiên bản bạn đang sử dụng &ndash;&gt;-->
+<!--		</dependency>-->
+		<!-- https://mvnrepository.com/artifact/org.apache.commons/commons-csv -->
+<!--		<dependency>-->
+<!--			<groupId>org.apache.commons</groupId>-->
+<!--			<artifactId>commons-csv</artifactId>-->
+<!--			<version>1.9.0</version>-->
+<!--		</dependency>-->
+		<dependency>
+			<groupId>com.opencsv</groupId>
+			<artifactId>opencsv</artifactId>
+			<version>5.7.1</version> <!-- Hoặc phiên bản mới nhất -->
+		</dependency>
+
+
+
 		<!-- https://mvnrepository.com/artifact/com.bucket4j/bucket4j-core -->
 		<dependency>
 			<groupId>com.bucket4j</groupId>
