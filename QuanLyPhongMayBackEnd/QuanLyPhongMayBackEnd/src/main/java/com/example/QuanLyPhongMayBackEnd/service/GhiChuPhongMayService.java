@@ -89,4 +89,13 @@ public class GhiChuPhongMayService {
         List<GhiChuPhongMay> dsGhiChu = ghiChuPhongMayRepository.findByPhongMay_MaPhongOrderByNgayBaoLoiDesc(maPhong);
         return dsGhiChu.isEmpty() ? null : dsGhiChu.get(0);
     }
+    @Transactional
+    public void xoaByMaPhong(Long maPhong, String token) {
+        if (!isUserLoggedIn(token)) {
+            return; // Token không hợp lệ
+        }
+
+        // Delete all records in ghi_chu_phong_may where ma_phong matches
+        ghiChuPhongMayRepository.deleteByPhongMay_MaPhong(maPhong);
+    }
 }

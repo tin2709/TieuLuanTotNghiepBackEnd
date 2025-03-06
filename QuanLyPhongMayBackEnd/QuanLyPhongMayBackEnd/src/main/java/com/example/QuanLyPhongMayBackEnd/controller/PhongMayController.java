@@ -4,6 +4,7 @@ import com.example.QuanLyPhongMayBackEnd.DTO.PhongMayDTO;
 import com.example.QuanLyPhongMayBackEnd.entity.PhongMay;
 import com.example.QuanLyPhongMayBackEnd.entity.Tang;
 import com.example.QuanLyPhongMayBackEnd.service.PhongMayService;
+import com.example.QuanLyPhongMayBackEnd.service.TangService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,8 @@ public class PhongMayController {
 
     @Autowired
     private PhongMayService phongMayService;
+    @Autowired
+    private TangService tangService;
 
     @PostMapping("/LuuPhongMay")
     public PhongMay luu(
@@ -57,22 +60,29 @@ public class PhongMayController {
         return phongMayService.findByTrangThai(trangThai,token);
     }
 
-    @GetMapping("/PhongMay/{maPhong}")
-    public PhongMay layPhongMayTheoMa(@PathVariable Long maPhong, @RequestParam String token) {
+    @GetMapping("/PhongMay")
+    public PhongMay layPhongMayTheoMa(@RequestParam Long maPhong, @RequestParam String token) {
         // Handle token validation if necessary
-        return phongMayService.layPhongMayTheoMa(maPhong,token);
+        return phongMayService.layPhongMayTheoMa(maPhong, token);
     }
 
-    @DeleteMapping("/XoaPhongMay/{maPhong}")
+
+    @DeleteMapping("/XoaPhongMay")
     @Transactional
-    public String xoa(@PathVariable Long maPhong, @RequestParam String token) {
-        // Handle token validation if necessary
-        phongMayService.xoa(maPhong,token);
-        return "Đã xoá " + maPhong;
+    public String xoa(@RequestParam Long maPhong, @RequestParam String token) {
+        // Validate token, if necessary, using a utility method
+        if (!phongMayService.isUserLoggedIn(token)) {
+            return "Token không hợp lệ";
+        }
+
+        // Proceed to delete related entities
+        phongMayService.xoa(maPhong, token);
+        return "Đã xoá phòng máy với mã " + maPhong;
     }
 
-    @PutMapping("/CapNhatPhongMay/{maPhong}")
-    public PhongMay capNhatTheoMa(
+
+    @PostMapping("/CapNhatPhongMay/{maPhong}")
+    public ResponseEntity<PhongMay> capNhatTheoMa(
             @PathVariable Long maPhong,
             @RequestParam String tenPhong,
             @RequestParam int soMay,
@@ -81,20 +91,38 @@ public class PhongMayController {
             @RequestParam Long maTang,
             @RequestParam String token) {
 
-        // Create a PhongMay object from the request parameters
-        PhongMay phongMay = new PhongMay();
-        phongMay.setTenPhong(tenPhong);
-        phongMay.setSoMay(soMay);
-        phongMay.setMoTa(moTa);
-        phongMay.setTrangThai(trangThai);
+        if (!phongMayService.isUserLoggedIn(token)) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
 
-        // Assuming the Tang entity is being set based on maTang (you may need a TangService to fetch Tang)
-        Tang tang = new Tang();  // This would need to be retrieved from the Tang entity based on maTang
-        tang.setMaTang(maTang);  // Assuming Tang has a setMaTang method
-        phongMay.setTang(tang);
-
-        return phongMayService.capNhatTheoMa(maPhong, phongMay,token);
+        try {
+            PhongMay updatedPhongMay = phongMayService.capNhatTheoMa(maPhong, tenPhong, soMay, moTa, trangThai, maTang, token);
+            if (updatedPhongMay == null) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+            return new ResponseEntity<>(updatedPhongMay, HttpStatus.OK);
+        } catch (Exception e) {
+            // Log the exception
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
+    @DeleteMapping("/XoaNhieuPhongMay")
+    @Transactional
+    public String xoaNhieuPhongMay(@RequestParam List<Long> maPhongList, @RequestParam String token) {
+        // Validate token, if necessary, using a utility method
+        if (!phongMayService.isUserLoggedIn(token)) {
+            return "Token không hợp lệ";
+        }
+
+        // Proceed to delete related entities for each room
+        for (Long maPhong : maPhongList) {
+            phongMayService.xoa(maPhong, token);
+        }
+
+        return "Đã xoá " + maPhongList.size() + " phòng máy";
+    }
+
     @GetMapping("/searchPhongMay")
     public ResponseEntity<Map<String, Object>> searchPhongMay(@RequestParam String keyword, @RequestParam String token) {
         if (!phongMayService.isUserLoggedIn(token)) {

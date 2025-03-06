@@ -15,5 +15,7 @@ public interface GhiChuPhongMayRepository extends JpaRepository<GhiChuPhongMay, 
     public List<GhiChuPhongMay> findByNgaySua( @Temporal(TemporalType.DATE) Date ngaySua);
     public List<GhiChuPhongMay> findByPhongMay_MaPhong(Long maPhong);
     public List<GhiChuPhongMay> findByPhongMay_MaPhongOrderByNgayBaoLoiDesc(Long maPhong);
+    void deleteByPhongMay_MaPhong(Long maPhong);
+
 
 }
