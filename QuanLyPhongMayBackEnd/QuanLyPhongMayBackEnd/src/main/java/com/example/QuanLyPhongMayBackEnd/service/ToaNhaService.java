@@ -2,6 +2,7 @@ package com.example.QuanLyPhongMayBackEnd.service;
 import com.example.QuanLyPhongMayBackEnd.entity.LichTruc;
 import com.example.QuanLyPhongMayBackEnd.entity.Tang;
 import com.example.QuanLyPhongMayBackEnd.entity.ToaNha;
+import com.example.QuanLyPhongMayBackEnd.repository.TangRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.ToaNhaRepository;
 import com.opencsv.exceptions.CsvValidationException;
 import jakarta.transaction.Transactional;
@@ -22,6 +23,8 @@ public class ToaNhaService {
 
     @Autowired
     private ToaNhaRepository toaNhaRepository;
+    @Autowired
+    private TangRepository tangRepository;
 
     @Autowired
     private TangService tangService;
@@ -88,44 +91,57 @@ public class ToaNhaService {
         }
 
         // Đọc file CSV sử dụng OpenCSV
-        List<ToaNha> toaNhaList = new ArrayList<>();
+        List<Tang> tangList = new ArrayList<>();
         try (Reader reader = new InputStreamReader(file.getInputStream(), "UTF-8")) {
             CSVReader csvReader = new CSVReader(reader);
             String[] nextLine;
 
             // Bỏ qua dòng tiêu đề
-            boolean isHeader = true; // Flag để bỏ qua dòng tiêu đề
+            boolean isHeader = true;
             while ((nextLine = csvReader.readNext()) != null) {
                 if (isHeader) {
                     isHeader = false; // Bỏ qua dòng tiêu đề
                     continue;
                 }
 
-                // Kiểm tra nếu dòng không rỗng và đảm bảo đúng định dạng
-                if (nextLine.length > 0) { // Check nếu có dữ liệu trong dòng
-                    StringBuilder tenToaNha = new StringBuilder();
+                // Lấy tên tầng (các cột giữa dấu phẩy), thay dấu phẩy bằng khoảng trắng
+                String tenTang = nextLine[1].replaceAll(",", " ").trim(); // Tầng, loại bỏ dấu phẩy và thay bằng khoảng trắng
 
-                    // Duyệt qua các cột và kết hợp chúng thành một chuỗi đầy đủ
-                    for (String value : nextLine) {
-                        if (tenToaNha.length() > 0) {
-                            tenToaNha.append(" "); // Thêm dấu phẩy nếu có nhiều cột
-                        }
-                        tenToaNha.append(value); // Thêm dữ liệu từ cột vào tên tòa nhà
-                    }
+                // Lấy mã tòa nhà từ cột cuối cùng, loại bỏ dấu phẩy nếu có
+                String maToaNhaStr = nextLine[nextLine.length - 1].replaceAll(",", "").trim(); // Mã tòa nhà, loại bỏ dấu phẩy
 
-                    // Tạo đối tượng ToaNha và thêm vào danh sách
-                    ToaNha toaNha = new ToaNha();
-                    toaNha.setTenToaNha(tenToaNha.toString().trim()); // Đảm bảo tên không có dấu cách thừa
-                    toaNhaList.add(toaNha);
+                // Kiểm tra nếu mã tòa nhà rỗng hoặc không hợp lệ
+                if (maToaNhaStr.isEmpty() || !maToaNhaStr.matches("\\d+")) {  // Kiểm tra chuỗi không rỗng và là số hợp lệ
+                    System.out.println("Mã tòa nhà không hợp lệ: " + maToaNhaStr);
+                    continue; // Bỏ qua dòng này nếu mã tòa nhà không hợp lệ
+                }
+
+                // Chuyển mã tòa nhà thành kiểu Long
+                Long maToaNha = Long.parseLong(maToaNhaStr);
+
+                // Tìm tòa nhà tương ứng
+                Optional<ToaNha> toaNhaOptional = toaNhaRepository.findById(maToaNha);
+                if (toaNhaOptional.isPresent()) {
+                    ToaNha toaNha = toaNhaOptional.get();
+
+                    // Tạo đối tượng Tang và lưu vào danh sách
+                    Tang tang = new Tang();
+                    tang.setTenTang(tenTang);
+                    tang.setToaNha(toaNha);
+
+                    tangList.add(tang);
+                } else {
+                    // Nếu không tìm thấy tòa nhà, có thể bỏ qua hoặc xử lý lỗi
+                    System.out.println("Không tìm thấy tòa nhà với mã: " + maToaNha);
                 }
             }
-        } catch (IOException | CsvValidationException e) {
+        } catch (IOException e) {
             throw new Exception("Lỗi khi đọc file CSV: " + e.getMessage());
         }
 
-        // Lưu tất cả dữ liệu vào cơ sở dữ liệu
-        if (!toaNhaList.isEmpty()) {
-            toaNhaRepository.saveAll(toaNhaList);
+        // Lưu tất cả các tầng vào cơ sở dữ liệu
+        if (!tangList.isEmpty()) {
+            tangRepository.saveAll(tangList);
         }
     }
 

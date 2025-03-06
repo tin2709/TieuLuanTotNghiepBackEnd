@@ -6,7 +6,9 @@ import com.example.QuanLyPhongMayBackEnd.service.TangService;
 import com.example.QuanLyPhongMayBackEnd.service.ToaNhaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -61,5 +63,19 @@ public class TangController {
     public Tang layTangTheoMa(@PathVariable Long maTang, @RequestParam String token) {
         // Handle token validation if needed
         return tangService.layTangTheoMa(maTang, token);
+    }
+    @PostMapping("/importTang")
+    public String importTangsFromCSV(@RequestParam("file") MultipartFile file, @RequestParam String token) {
+        if (!tangService.isUserLoggedIn(token)) {
+            return "Token không hợp lệ!";
+        }
+        try {
+            tangService.importCSVFile(file);
+            return "Import dữ liệu thành công!";
+        } catch (IOException e) {
+            return "Có lỗi xảy ra khi xử lý file CSV: " + e.getMessage();
+        } catch (Exception e) {
+            return "Có lỗi xảy ra trong quá trình import: " + e.getMessage();
+        }
     }
 }

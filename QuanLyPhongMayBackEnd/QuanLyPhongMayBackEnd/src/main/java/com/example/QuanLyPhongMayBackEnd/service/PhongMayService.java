@@ -3,9 +3,12 @@ import com.example.QuanLyPhongMayBackEnd.DTO.PhongMayDTO;
 import com.example.QuanLyPhongMayBackEnd.entity.CaThucHanh;
 import com.example.QuanLyPhongMayBackEnd.entity.MayTinh;
 import com.example.QuanLyPhongMayBackEnd.entity.PhongMay;
+import com.example.QuanLyPhongMayBackEnd.entity.Tang;
 import com.example.QuanLyPhongMayBackEnd.repository.PhongMayRepository;
+import com.example.QuanLyPhongMayBackEnd.repository.TangRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -32,7 +35,12 @@ public class PhongMayService {
     private PhongMayRepository phongMayRepository;
     @Autowired
     private TaiKhoanService taiKhoanService;
-
+    @Autowired
+    private GhiChuMayTinhService ghiChuMayTinhService;
+    @Autowired
+    private GhiChuPhongMayService ghiChuPhongMayService;
+    @Autowired
+    private TangRepository tangRepository;
     public boolean isUserLoggedIn(String token) {
         return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
     }
@@ -50,6 +58,29 @@ public class PhongMayService {
             return phongMay;
         }
     }
+    public PhongMay capNhatTheoMaTang(Long maTang, PhongMay phongMay, String token) {
+        // Kiểm tra lại quyền người dùng
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
+
+        // Kiểm tra nếu maTang có tồn tại phòng máy
+        List<PhongMay> danhSachPhongMay = phongMayRepository.findByTang_MaTang(maTang);
+        if (danhSachPhongMay.isEmpty()) {
+            throw new IllegalArgumentException("Không tìm thấy phòng máy thuộc tầng với maTang: " + maTang);
+        }
+
+        // Cập nhật thông tin phòng máy (ví dụ lấy phòng máy đầu tiên từ danh sách)
+        PhongMay phongMayToUpdate = danhSachPhongMay.get(0);  // Hoặc logic lấy phòng máy cụ thể nào đó
+        phongMayToUpdate.setTenPhong(phongMay.getTenPhong());
+        phongMayToUpdate.setSoMay(phongMay.getSoMay());
+        phongMayToUpdate.setMoTa(phongMay.getMoTa());
+        phongMayToUpdate.setTrangThai(phongMay.getTrangThai());
+        phongMayToUpdate.setTang(phongMay.getTang());  // Cập nhật lại tầng cho phòng máy
+
+        // Lưu thông tin phòng máy đã cập nhật
+        return phongMayRepository.save(phongMayToUpdate);
+    }
 
     public List<PhongMay> findByTrangThai(String trangThai, String token) {
         if (!isUserLoggedIn(token)) {
@@ -65,30 +96,41 @@ public class PhongMayService {
         return phongMayRepository.findAll();
     }
 
+    @Transactional
     public void xoa(Long maPhong, String token) {
         if (!isUserLoggedIn(token)) {
             return; // Token không hợp lệ
         }
 
-        // Get the list of computers and practice sessions for this room
+        // Get the list of computers in the room
         List<MayTinh> danhSachMayTinh = mayTinhService.layDSMayTinhTheoMaPhong(maPhong, token);
 
-        // Now, you need to provide both parameters to `layDSCaThucHanhTheoMaPhong`
+        // Get the list of practice shifts associated with the room
         List<CaThucHanh> danhSachCaThucHanh = caThucHanhService.layDSCaThucHanhTheoMaPhong(maPhong, token);
+        ghiChuPhongMayService.xoaByMaPhong(maPhong, token);
 
-        // Continue with the deletion logic
+        // Delete all entries in the ghi_chu_may_tinh table that reference the computers
+        for (MayTinh mayTinh : danhSachMayTinh) {
+            // Assuming ghiChuMayTinhService can delete records by maMay
+            ghiChuMayTinhService.xoaTheoMaMay(mayTinh.getMaMay(), token);
+        }
+
+        // Delete all computers in the room
         for (MayTinh mayTinh : danhSachMayTinh) {
             mayTinhService.xoa(mayTinh.getMaMay(), token);
         }
 
+        // Delete all practice shifts associated with the room
         for (CaThucHanh caThucHanh : danhSachCaThucHanh) {
             caThucHanhService.xoa(caThucHanh.getMaCa(), token);
         }
 
-        entityManager.flush();
-        entityManager.clear();
+        // Finally, delete the room itself
         phongMayRepository.deleteById(maPhong);
 
+        // Ensure changes are flushed to the database immediately
+        entityManager.flush();
+        entityManager.clear();
     }
 
     public PhongMay luu(PhongMay phongMay, String token) {
@@ -98,13 +140,31 @@ public class PhongMayService {
         return phongMayRepository.save(phongMay);
     }
 
-    public PhongMay capNhatTheoMa(Long maPhong, PhongMay phongMay, String token) {
+    public PhongMay capNhatTheoMa(Long maPhong, String tenPhong, int soMay, String moTa, String trangThai, Long maTang, String token) {
         if (!isUserLoggedIn(token)) {
             return null; // Token không hợp lệ
         }
+
         Optional<PhongMay> phongMayDB = phongMayRepository.findById(maPhong);
         if (phongMayDB.isPresent()) {
             PhongMay phongMayCu = phongMayDB.get();
+
+            // Cập nhật thông tin từ request
+            phongMayCu.setTenPhong(tenPhong);
+            phongMayCu.setSoMay(soMay);
+            phongMayCu.setMoTa(moTa);
+            phongMayCu.setTrangThai(trangThai);
+
+            // Tìm Tang theo maTang
+            Optional<Tang> tangOptional = tangRepository.findById(maTang);
+            if (!tangOptional.isPresent()) {
+                // Handle case where Tang is not found
+                return null; // Or throw an exception
+            }
+            Tang tang = tangOptional.get();
+            phongMayCu.setTang(tang); // Set the Tang object
+
+            // Lưu lại vào cơ sở dữ liệu
             return phongMayRepository.save(phongMayCu);
         }
         return null;
