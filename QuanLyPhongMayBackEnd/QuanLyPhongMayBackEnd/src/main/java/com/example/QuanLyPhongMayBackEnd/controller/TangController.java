@@ -4,6 +4,7 @@ import com.example.QuanLyPhongMayBackEnd.entity.Tang;
 import com.example.QuanLyPhongMayBackEnd.entity.ToaNha;
 import com.example.QuanLyPhongMayBackEnd.service.TangService;
 import com.example.QuanLyPhongMayBackEnd.service.ToaNhaService;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -46,11 +47,26 @@ public class TangController {
         return tangService.layDSTang(token);
     }
 
-    @DeleteMapping("/XoaTang/{maTang}")
-    public String xoa(@PathVariable Long maTang, @RequestParam String token) {
+    @DeleteMapping("/XoaTang")
+    public String xoa(@RequestParam Long maTang, @RequestParam String token) {
         // Handle token validation if needed
         tangService.xoa(maTang, token);
         return "Đã xoá tầng " + maTang;
+    }
+    @DeleteMapping("/XoaNhieuTang")
+    @Transactional
+    public String xoaNhieuPhongMay(@RequestParam List<Long> maTangList, @RequestParam String token) {
+        // Validate token, if necessary, using a utility method
+        if (!tangService.isUserLoggedIn(token)) {
+            return "Token không hợp lệ";
+        }
+
+        // Proceed to delete related entities for each room
+        for (Long maTang : maTangList) {
+            tangService.xoa(maTang, token);
+        }
+
+        return "Đã xoá " + maTangList.size() + " tầng";
     }
 
     @GetMapping("/TangTheoToaNha/{maToaNha}")
