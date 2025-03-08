@@ -140,6 +140,41 @@ public class TaiKhoanController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
+    @GetMapping("/checkingLogin")
+    public ResponseEntity<Map<String, Object>> checkingLogin(@RequestParam String username,
+                                                             @RequestParam String password,
+                                                             @RequestParam String token) {
+        Map<String, Object> response = new HashMap<>();
+
+        // Tìm token trong cơ sở dữ liệu
+        Optional<Token> tokenOptional = tokenRepository.findByToken(token);
+
+        if (tokenOptional.isPresent()) {
+            TaiKhoan taiKhoan = tokenOptional.get().getTaiKhoan(); // Lấy tài khoản từ token
+
+            // Kiểm tra nếu username và mật khẩu đã mã hóa đúng
+            if (taiKhoan.getTenDangNhap().equals(username) && passwordEncoder.matches(password, taiKhoan.getMatKhau())) {
+                response.put("status", "success");
+                response.put("message", "User is logged in");
+                response.put("data", Map.of(
+                        "maTK", taiKhoan.getMaTK(),
+                        "tenDangNhap", taiKhoan.getTenDangNhap(),
+                        "quyen", taiKhoan.getQuyen().getMaQuyen() // Giả sử quyen có phương thức getRole_id()
+                ));
+            } else {
+                // Username or password incorrect
+                response.put("status", "error");
+                response.put("message", "Invalid username or password");
+            }
+        } else {
+            // Token không tồn tại hoặc không hợp lệ
+            response.put("status", "error");
+            response.put("message", "Invalid or expired token");
+        }
+
+        return new ResponseEntity<>(response, response.get("status").equals("success") ? HttpStatus.OK : HttpStatus.BAD_REQUEST);
+    }
+
     @PostMapping("/reLogin")
     public Map<String, Object> reLogin(@RequestParam String token) throws Exception {
         return taiKhoanService.reLogin(token);
@@ -231,4 +266,19 @@ public class TaiKhoanController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response); // Trả về 401 Unauthorized nếu lỗi
         }
     }
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, Object>> logoutUser(@RequestParam String token) {
+        // Call the service method to handle logout logic
+        Map<String, Object> response = taiKhoanService.logoutUser(token);
+
+        // Check the status of the response and return appropriate HTTP status
+        if ("success".equals(response.get("status"))) {
+            return new ResponseEntity<>(response, HttpStatus.OK); // Success response with 200 OK
+        } else {
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST); // Error response with 400 BAD REQUEST
+        }
+    }
+
+
+
 }

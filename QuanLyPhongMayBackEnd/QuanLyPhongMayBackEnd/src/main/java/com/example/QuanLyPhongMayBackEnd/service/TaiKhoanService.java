@@ -7,6 +7,7 @@ import com.example.QuanLyPhongMayBackEnd.repository.AuthRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.TaiKhoanRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.TokenRepository;
 import com.example.QuanLyPhongMayBackEnd.security.JwtUtil;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -229,4 +230,26 @@ public class TaiKhoanService {
         }
         return response;
     }
+    @Transactional
+    public Map<String, Object> logoutUser(String tokenValue) {
+        // Look up the token in the database
+        Optional<Token> token = tokenRepository.findByToken(tokenValue);
+
+        Map<String, Object> response = new HashMap<>();
+
+        if (token.isPresent()) {
+            // If token exists, delete it from the database
+            tokenRepository.delete(token.get());
+            response.put("status", "success");
+            response.put("message", "User logged out successfully");
+            response.put("login", false); // Indicate that the user is no longer logged in
+        } else {
+            // Token doesn't exist or is invalid
+            response.put("status", "error");
+            response.put("message", "Invalid or expired token");
+        }
+
+        return response; // Return the map directly for use in the controller
+    }
+
 }
