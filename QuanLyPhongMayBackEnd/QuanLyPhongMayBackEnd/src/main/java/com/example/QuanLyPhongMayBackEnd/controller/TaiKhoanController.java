@@ -61,6 +61,7 @@ public class TaiKhoanController {
     public TaiKhoanController(UploadImageFile uploadImageFile) throws UnknownHostException {
         this.uploadImageFile = uploadImageFile;
     }
+
     //    private String getSubRandom() {
 //        return fileStorageService.provider_RandomString();
 //    }
@@ -72,7 +73,7 @@ public class TaiKhoanController {
             @RequestParam String email,  // New parameter for email
             @RequestParam(required = false) MultipartFile imageFile,  // Handle the image file
             @RequestParam String maQuyen  // Assuming quyen is a string for the role ID
-            ) throws IOException {  // New parameter for the role name
+    ) throws IOException {  // New parameter for the role name
 
         // Check if email is already taken
         if (taiKhoanRepository.findByEmail(email).isPresent()) {
@@ -111,9 +112,6 @@ public class TaiKhoanController {
     }
 
 
-
-
-
     @PostMapping("/login")
     public ResponseEntity<Map<String, String>> login(@RequestParam String username, @RequestParam String password) {
         Optional<TaiKhoan> taiKhoanOptional = taiKhoanService.timTaiKhoanByUsername(username);
@@ -140,6 +138,7 @@ public class TaiKhoanController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
+
     @GetMapping("/checkingLogin")
     public ResponseEntity<Map<String, Object>> checkingLogin(@RequestParam String username,
                                                              @RequestParam String password,
@@ -181,7 +180,6 @@ public class TaiKhoanController {
     }
 
 
-
     @GetMapping("/checkLogin")
     public ResponseEntity<Map<String, Object>> checkLogin(@RequestParam String token) {
         Map<String, Object> response = new HashMap<>();
@@ -206,10 +204,6 @@ public class TaiKhoanController {
 
         return new ResponseEntity<>(response, response.get("status").equals("success") ? HttpStatus.OK : HttpStatus.BAD_REQUEST);
     }
-
-
-
-
 
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
@@ -239,6 +233,7 @@ public class TaiKhoanController {
         Page<TaiKhoan> taiKhoans = taiKhoanService.layDSTaiKhoanPhanTrang(pageNumber);
         return new ResponseEntity<>(taiKhoans, HttpStatus.OK);
     }
+
     @PostMapping("/forgot_password")
     public ResponseEntity<?> forgotPassword(@RequestParam Map<String, String> request) {
         String email = request.get("email");
@@ -251,6 +246,7 @@ public class TaiKhoanController {
         String otp = request.get("otp");
         return taiKhoanService.handleVerifyOtp(email, otp);
     }
+
     @PostMapping("/update_password")
     public ResponseEntity<Map<String, Object>> updatePass(@RequestParam Map<String, String> request) {
         String email = request.get("email");
@@ -266,6 +262,7 @@ public class TaiKhoanController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response); // Trả về 401 Unauthorized nếu lỗi
         }
     }
+
     @PostMapping("/logout")
     public ResponseEntity<Map<String, Object>> logoutUser(@RequestParam String token) {
         // Call the service method to handle logout logic
@@ -279,6 +276,90 @@ public class TaiKhoanController {
         }
     }
 
+    @PostMapping("/banUser")
+    public ResponseEntity<Map<String, Object>> banUser(
+            @RequestParam Long maTk,
+            @RequestParam String token) {
+
+        // Lấy maTK từ token
+        Long maTK = jwtUtil.getMaTKFromToken(token);  // Lấy maTK từ token
+        if (maTK == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                    "status", "error",
+                    "message", "Token không hợp lệ"
+            ));
+        }
+
+        // Kiểm tra xem người dùng có quyền admin không
+        TaiKhoan taiKhoan = taiKhoanRepository.findById(String.valueOf(maTK)).orElse(null);
+        if (taiKhoan == null || taiKhoan.getQuyen().getMaQuyen() != 5) {  // Kiểm tra quyền của người dùng
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "status", "error",
+                    "message", "Chỉ có admin mới có quyền"
+            ));
+        }
+
+        // Kiểm tra và ban user
+        TaiKhoan userToBan = taiKhoanRepository.findById(String.valueOf(maTk)).orElse(null);
+        if (userToBan == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                    "status", "error",
+                    "message", "User not found"
+            ));
+        }
+
+        // Ban user
+        userToBan.setBanned(true);
+        taiKhoanRepository.save(userToBan);
+
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "message", "User has been banned"
+        ));
+    }
+
+    // API để mở khóa tài khoản
+    @PostMapping("/unbanUser")
+    public ResponseEntity<Map<String, Object>> unbanUser(
+            @RequestParam Long maTk,
+            @RequestParam String token) {
+
+        // Lấy maTK từ token
+        Long maTK = jwtUtil.getMaTKFromToken(token);  // Lấy maTK từ token
+        if (maTK == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                    "status", "error",
+                    "message", "Token không hợp lệ"
+            ));
+        }
+
+        // Kiểm tra xem người dùng có quyền admin không
+        TaiKhoan taiKhoan = taiKhoanRepository.findById(String.valueOf(maTK)).orElse(null);
+        if (taiKhoan == null || taiKhoan.getQuyen().getMaQuyen() != 5) {  // Kiểm tra quyền của người dùng
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "status", "error",
+                    "message", "Chỉ có admin mới có quyền"
+            ));
+        }
+
+        // Kiểm tra và unban user
+        TaiKhoan userToUnban = taiKhoanRepository.findById(String.valueOf(maTk)).orElse(null);
+        if (userToUnban == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                    "status", "error",
+                    "message", "User not found"
+            ));
+        }
+
+        // Unban user
+        userToUnban.setBanned(false);
+        taiKhoanRepository.save(userToUnban);
+
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "message", "User has been unbanned"
+        ));
 
 
+    }
 }

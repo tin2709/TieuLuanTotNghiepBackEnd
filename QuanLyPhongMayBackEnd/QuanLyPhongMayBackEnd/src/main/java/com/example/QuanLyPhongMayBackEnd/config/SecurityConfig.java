@@ -19,7 +19,8 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())  // Tắt CSRF cho API stateless
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/logout").permitAll()  // Cho phép tất cả vào /logout
+                        .requestMatchers("/logout", "/banUser", "/unbanUser").permitAll()  // Allow access to /logout, /banUser, and /unbanUser
+
                         .anyRequest().permitAll()  // Cho phép tất cả request
                 )
                 .anonymous(withDefaults())  // Bật Anonymous Authentication

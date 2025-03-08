@@ -36,8 +36,12 @@ public class TaiKhoanService {
     private AuthService authService;
     @Autowired
     private MailService mailService;
-    @Autowired
+
     private JwtUtil jwtUtil;
+    @Autowired
+    public void setJwtUtil(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
     // Xóa tài khoản theo mã
     public void xoa(String maTK) {
         taiKhoanRepository.deleteById(maTK);

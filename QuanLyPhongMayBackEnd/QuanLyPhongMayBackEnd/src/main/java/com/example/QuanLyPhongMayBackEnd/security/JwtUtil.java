@@ -1,8 +1,12 @@
 package com.example.QuanLyPhongMayBackEnd.security;
 
+import com.example.QuanLyPhongMayBackEnd.entity.TaiKhoan;
 import com.example.QuanLyPhongMayBackEnd.entity.Token;
 import com.example.QuanLyPhongMayBackEnd.repository.TokenRepository;
+import com.example.QuanLyPhongMayBackEnd.service.TaiKhoanService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -20,13 +24,16 @@ public class JwtUtil {
     private final TokenRepository tokenRepository;
     // Tạo key sử dụng với thuật toán HS512
     private Key key = Keys.secretKeyFor(SignatureAlgorithm.HS512);
-
+    @Autowired
+    private TaiKhoanService taiKhoanService;
     @Value("${jwt.expiration}")
     private long expiration;
 
     public JwtUtil(TokenRepository tokenRepository) {
         this.tokenRepository = tokenRepository;
     }
+
+    @Lazy
 
     // Tạo token
     public String generateToken(String username) {
@@ -70,5 +77,28 @@ public class JwtUtil {
     public long getExpiration() {
         return expiration;
     }
+    public Long getMaTKFromToken(String token) {
+        // Kiểm tra token có hợp lệ không
+        if (validateToken(token)) {
+            // Lấy username từ token
+            String username = getUsernameFromToken(token);
+
+            // Tìm tài khoản theo username
+            Optional<TaiKhoan> taiKhoanOptional = taiKhoanService.timTaiKhoanByUsername(username);
+
+            // Kiểm tra xem tài khoản có tồn tại không
+            if (taiKhoanOptional.isPresent()) {
+                // Nếu có, trả về maTK của tài khoản
+                return taiKhoanOptional.get().getMaTK();
+            } else {
+                // Nếu không tìm thấy tài khoản
+                throw new RuntimeException("Tài khoản không tồn tại trong hệ thống.");
+            }
+        } else {
+            // Nếu token không hợp lệ
+            throw new RuntimeException("Token không hợp lệ hoặc đã hết hạn.");
+        }
+    }
+
 }
 
