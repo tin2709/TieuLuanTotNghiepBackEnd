@@ -16,11 +16,17 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())  // Disable CSRF for stateless APIs
                 .authorizeHttpRequests(authorizeRequests ->
                         authorizeRequests
-                                .requestMatchers("/logout").authenticated()  // Protect the /logout endpoint and require authentication
-                                .anyRequest().permitAll()  // Allow all other endpoints
+                                .requestMatchers("/logout").permitAll()  // Allow access to /logout
+                                .anyRequest().permitAll()  // Allow access to all other endpoints
                 )
+
                 .httpBasic(httpBasic -> httpBasic.disable()) // Disable HTTP Basic Authentication
-                .sessionManagement(session -> session.disable()); // Disable session management for stateless API
+                .sessionManagement(session -> session.disable()) // Disable session management for stateless API
+                .logout(logout -> logout
+                        .logoutUrl("/logout")  // Define the logout URL
+                        .permitAll()            // Allow everyone to access the logout URL
+                        .logoutRequestMatcher(request -> request.getMethod().equals("GET"))  // Allow GET method for logout
+                );
 
         return http.build();
     }

@@ -81,9 +81,9 @@ public class PhongMayController {
     }
 
 
-    @PostMapping("/CapNhatPhongMay/{maPhong}")
+    @PostMapping("/CapNhatPhongMay")
     public ResponseEntity<PhongMay> capNhatTheoMa(
-            @PathVariable Long maPhong,
+            @RequestParam Long maPhong,
             @RequestParam String tenPhong,
             @RequestParam int soMay,
             @RequestParam String moTa,
