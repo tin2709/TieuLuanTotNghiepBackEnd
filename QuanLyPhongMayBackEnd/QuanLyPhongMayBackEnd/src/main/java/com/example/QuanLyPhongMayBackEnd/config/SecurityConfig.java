@@ -3,9 +3,13 @@ package com.example.QuanLyPhongMayBackEnd.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+
+import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 public class SecurityConfig {
@@ -13,19 +17,19 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())  // Disable CSRF for stateless APIs
-                .authorizeHttpRequests(authorizeRequests ->
-                        authorizeRequests
-                                .requestMatchers("/logout").permitAll()  // Allow access to /logout
-                                .anyRequest().permitAll()  // Allow access to all other endpoints
+                .csrf(csrf -> csrf.disable())  // Tắt CSRF cho API stateless
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/logout").permitAll()  // Cho phép tất cả vào /logout
+                        .anyRequest().permitAll()  // Cho phép tất cả request
                 )
-
-                .httpBasic(httpBasic -> httpBasic.disable()) // Disable HTTP Basic Authentication
-                .sessionManagement(session -> session.disable()) // Disable session management for stateless API
+                .anonymous(withDefaults())  // Bật Anonymous Authentication
+                .formLogin(login -> login.disable())  // Tắt form login để tránh redirect loop
+                .httpBasic(httpBasic -> httpBasic.disable()) // Tắt HTTP Basic Authentication
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Stateless session
                 .logout(logout -> logout
-                        .logoutUrl("/logout")  // Define the logout URL
-                        .permitAll()            // Allow everyone to access the logout URL
-                        .logoutRequestMatcher(request -> request.getMethod().equals("GET"))  // Allow GET method for logout
+                        .logoutUrl("/logout")  // Cấu hình URL logout
+                        .logoutRequestMatcher(new AntPathRequestMatcher("/logout", "GET"))  // Cho phép logout bằng GET
+                        .permitAll()
                 );
 
         return http.build();
@@ -33,6 +37,7 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(); // Use BCrypt for password encoding
+        return new BCryptPasswordEncoder(); // Dùng BCrypt để mã hóa mật khẩu
     }
 }
+
