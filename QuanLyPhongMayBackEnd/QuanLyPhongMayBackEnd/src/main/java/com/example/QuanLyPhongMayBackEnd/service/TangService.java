@@ -175,6 +175,35 @@ public class TangService {
             tangRepository.saveAll(tangList);
         }
     }
+    @Transactional
+    public Tang capNhatTang(Long maTang, String tenTang, Long maToaNha, String token) {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
+
+        // Tìm tầng theo maTang
+        Optional<Tang> tangOptional = tangRepository.findById(maTang);
+        if (!tangOptional.isPresent()) {
+            return null; // Nếu không tìm thấy tầng
+        }
+
+        Tang tang = tangOptional.get();
+
+        // Cập nhật thông tin của tầng
+        tang.setTenTang(tenTang);
+
+        // Tìm tòa nhà theo maToaNha
+        Optional<ToaNha> toaNhaOptional = toaNhaRepository.findById(maToaNha);
+        if (!toaNhaOptional.isPresent()) {
+            return null; // Nếu không tìm thấy tòa nhà
+        }
+
+        ToaNha toaNha = toaNhaOptional.get();
+        tang.setToaNha(toaNha); // Cập nhật tòa nhà cho tầng
+
+        // Lưu lại vào cơ sở dữ liệu
+        return tangRepository.save(tang);
+    }
 
 
 }

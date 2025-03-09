@@ -6,6 +6,8 @@ import com.example.QuanLyPhongMayBackEnd.service.TangService;
 import com.example.QuanLyPhongMayBackEnd.service.ToaNhaService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -75,8 +77,8 @@ public class TangController {
         return tangService.layTangTheoToaNha(maToaNha, token);
     }
 
-    @GetMapping("/Tang/{maTang}")
-    public Tang layTangTheoMa(@PathVariable Long maTang, @RequestParam String token) {
+    @GetMapping("/Tang")
+    public Tang layTangTheoMa(@RequestParam Long maTang, @RequestParam String token) {
         // Handle token validation if needed
         return tangService.layTangTheoMa(maTang, token);
     }
@@ -94,4 +96,21 @@ public class TangController {
             return "Có lỗi xảy ra trong quá trình import: " + e.getMessage();
         }
     }
+    @PostMapping("/CapNhatTang")
+    public ResponseEntity<Tang> capNhatTang(
+            @RequestParam Long maTang,
+            @RequestParam String tenTang,
+            @RequestParam Long maToaNha,
+            @RequestParam String token) {
+
+        // Gọi service để cập nhật tầng
+        Tang updatedTang = tangService.capNhatTang(maTang, tenTang, maToaNha, token);
+
+        if (updatedTang == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND); // Nếu không tìm thấy tầng hoặc tòa nhà
+        }
+
+        return new ResponseEntity<>(updatedTang, HttpStatus.OK); // Trả về tầng đã cập nhật
+    }
+
 }
