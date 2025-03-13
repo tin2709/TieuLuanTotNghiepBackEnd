@@ -1,6 +1,7 @@
 package com.example.QuanLyPhongMayBackEnd.controller;
 
 import com.example.QuanLyPhongMayBackEnd.DTO.PhongMayDTO;
+import com.example.QuanLyPhongMayBackEnd.DTO.QRDTO;
 import com.example.QuanLyPhongMayBackEnd.entity.PhongMay;
 import com.example.QuanLyPhongMayBackEnd.entity.Tang;
 import com.example.QuanLyPhongMayBackEnd.service.PhongMayService;
@@ -155,40 +156,28 @@ public class PhongMayController {
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
-    @PostMapping("/importData")
-    public String importDataFromCSV(@RequestParam("file") MultipartFile file,
-                                    @RequestParam String token,
-                                    @RequestParam String tenBang) {
+    @PostMapping("/importPhongMay")
+    public String importPhongMaysFromCSV(@RequestParam("file") MultipartFile file, @RequestParam String token) {
+        if (!phongMayService.isUserLoggedIn(token)) {
+            return "Token không hợp lệ!";
+        }
         try {
-            // Loại bỏ khoảng trắng ở đầu và cuối chuỗi tenBang để tránh lỗi so sánh
-            tenBang = tenBang.trim();
-
-            // Kiểm tra giá trị của tenBang để quyết định sử dụng service nào
-            if ("tang".equalsIgnoreCase(tenBang)) {
-                // Nếu tenBang là 'tang', kiểm tra token hợp lệ cho bảng tầng
-                if (!tangService.isUserLoggedIn(token)) {
-                    return "Token không hợp lệ cho bảng tầng!";
-                }
-                // Thực hiện import dữ liệu cho tầng
-                tangService.importCSVFile(file);
-                return "Import dữ liệu tầng thành công!";
-            } else if ("toa_nha".equalsIgnoreCase(tenBang)) {
-                // Nếu tenBang là 'toa_nha', kiểm tra token hợp lệ cho bảng tòa nhà
-                if (!toaNhaService.isUserLoggedIn(token)) {
-                    return "Token không hợp lệ cho bảng tòa nhà!";
-                }
-                // Thực hiện import dữ liệu cho tòa nhà
-                toaNhaService.importCSVFile(file);
-                return "Import dữ liệu tòa nhà thành công!";
-            } else {
-                // Nếu giá trị tenBang không hợp lệ
-                return "Tên bảng không hợp lệ!";
-            }
+            phongMayService.importCSVFile(file);
+            return "Import dữ liệu thành công!";
         } catch (IOException e) {
             return "Có lỗi xảy ra khi xử lý file CSV: " + e.getMessage();
         } catch (Exception e) {
             return "Có lỗi xảy ra trong quá trình import: " + e.getMessage();
         }
+    }
+    @GetMapping("/phong-may-thong-ke")
+    public ResponseEntity<List<QRDTO>> layDanhSachPhongMayThongKe(@RequestParam String token) {
+        if (!phongMayService.isUserLoggedIn(token)) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+
+        List<QRDTO> danhSachPhongMay = phongMayService.layDanhSachPhongMayVaThongKe(token);
+        return new ResponseEntity<>(danhSachPhongMay, HttpStatus.OK);
     }
 
 

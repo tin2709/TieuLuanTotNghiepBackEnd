@@ -1,4 +1,5 @@
 package com.example.QuanLyPhongMayBackEnd.entity;
+
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 
@@ -13,8 +14,11 @@ public class MayTinh {
     @Column(name = "ma_may")
     private Long maMay;
 
-    @Column(name = "trang_thai",columnDefinition = "nvarchar(50) DEFAULT N'Đang hoạt động ' CHECK (trang_thai IN (N'Đã hỏng', N'Đang hoạt động'))")
-    private String trangThai= "Đang hoạt động";
+    @Column(name = "ten_may", columnDefinition = "nvarchar(100)")  // Added column for machine name
+    private String tenMay;  // This is the new field for the machine name
+
+    @Column(name = "trang_thai", columnDefinition = "nvarchar(50) DEFAULT N'Đang hoạt động' CHECK (trang_thai IN (N'Đã hỏng', N'Đang hoạt động'))")
+    private String trangThai = "Đang hoạt động";
 
     @Column(name = "mo_ta")
     private String moTa;
@@ -25,15 +29,23 @@ public class MayTinh {
     @ManyToOne
     @JsonBackReference
     @JoinColumn(name = "ma_phong")
-
     private PhongMay phongMay;
 
+    // Getters and setters
     public Long getMaMay() {
         return maMay;
     }
 
     public void setMaMay(Long maMay) {
         this.maMay = maMay;
+    }
+
+    public String getTenMay() {
+        return tenMay;
+    }
+
+    public void setTenMay(String tenMay) {
+        this.tenMay = tenMay;
     }
 
     public String getTrangThai() {
@@ -68,10 +80,11 @@ public class MayTinh {
         this.phongMay = phongMay;
     }
 
-
-    public MayTinh(Long maMay, String trangThai, String moTa, Date ngayLapDat, PhongMay phongMay) {
+    // Constructors
+    public MayTinh(Long maMay, String tenMay, String trangThai, String moTa, Date ngayLapDat, PhongMay phongMay) {
         super();
         this.maMay = maMay;
+        this.tenMay = tenMay;
         this.trangThai = trangThai;
         this.moTa = moTa;
         this.ngayLapDat = ngayLapDat;
@@ -80,12 +93,11 @@ public class MayTinh {
 
     public MayTinh() {
         super();
-        // TODO Auto-generated constructor stub
     }
 
     @Override
     public String toString() {
-        return String.format("MayTinh [maMay=%d, trangThai=%s, moTa=%s, ngayLapDat=%s, phongMay=%s]",
-                maMay, trangThai, moTa, ngayLapDat, phongMay != null ? phongMay.getTenPhong() : "null");
+        return String.format("MayTinh [maMay=%d, tenMay=%s, trangThai=%s, moTa=%s, ngayLapDat=%s, phongMay=%s]",
+                maMay, tenMay, trangThai, moTa, ngayLapDat, phongMay != null ? phongMay.getTenPhong() : "null");
     }
 }

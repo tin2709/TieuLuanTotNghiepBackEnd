@@ -1,6 +1,7 @@
 package com.example.QuanLyPhongMayBackEnd.controller;
 
 import com.example.QuanLyPhongMayBackEnd.entity.MayTinh;
+import com.example.QuanLyPhongMayBackEnd.entity.PhongMay;
 import com.example.QuanLyPhongMayBackEnd.service.MayTinhService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -21,6 +22,7 @@ public class MayTinhController {
     // Thêm mới máy tính
     @PostMapping("/LuuMayTinh")
     public ResponseEntity<MayTinh> luu(@RequestParam Long maMay,
+                                       @RequestParam String tenMay,  // Added tenMay to match the new field in MayTinh
                                        @RequestParam String trangThai,
                                        @RequestParam String moTa,
                                        @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date ngayLapDat,
@@ -31,15 +33,26 @@ public class MayTinhController {
         System.out.println("Token: " + token);
 
         // Tạo đối tượng MayTinh từ các tham số nhận được
-        MayTinh mayTinh = new MayTinh(maMay, trangThai, moTa, ngayLapDat, null);  // PhongMay sẽ được xử lý sau
+        MayTinh mayTinh = new MayTinh(maMay, tenMay, trangThai, moTa, ngayLapDat, null);  // Added tenMay
 
-        // Cần xử lý `PhongMay` sau khi lấy từ `maPhong`, giả sử có một phương thức trong service để lấy PhongMay
-        mayTinh.setPhongMay(mayTinhService.getPhongMayById(maPhong, token));
+        // Lấy đối tượng PhongMay từ service dựa trên maPhong và token
+        PhongMay phongMay = mayTinhService.getPhongMayById(maPhong, token);
 
-        // Lưu máy tính
+        if (phongMay == null) {
+            // Nếu không tìm thấy PhongMay, trả về lỗi
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);  // Optional: Return an error message if needed
+        }
+
+        // Gán PhongMay vào đối tượng MayTinh
+        mayTinh.setPhongMay(phongMay);
+
+        // Lưu máy tính vào hệ thống
         MayTinh savedMayTinh = mayTinhService.luu(mayTinh, token);
+
+        // Trả về phản hồi với đối tượng MayTinh đã lưu và mã trạng thái CREATED (201)
         return new ResponseEntity<>(savedMayTinh, HttpStatus.CREATED);
     }
+
 
     // Lấy danh sách máy tính theo trạng thái
     @GetMapping("/DSMayTinhtheoTrangThai")
