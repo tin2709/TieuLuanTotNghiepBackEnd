@@ -1,5 +1,7 @@
 package com.example.QuanLyPhongMayBackEnd.service;
+import com.example.QuanLyPhongMayBackEnd.DTO.MayTinhDTO;
 import com.example.QuanLyPhongMayBackEnd.DTO.PhongMayDTO;
+import com.example.QuanLyPhongMayBackEnd.DTO.QRDTO;
 import com.example.QuanLyPhongMayBackEnd.entity.CaThucHanh;
 import com.example.QuanLyPhongMayBackEnd.entity.MayTinh;
 import com.example.QuanLyPhongMayBackEnd.entity.PhongMay;
@@ -11,8 +13,15 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -41,6 +50,8 @@ public class PhongMayService {
     private GhiChuPhongMayService ghiChuPhongMayService;
     @Autowired
     private TangRepository tangRepository;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
     public boolean isUserLoggedIn(String token) {
         return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
     }
@@ -229,4 +240,65 @@ public class PhongMayService {
                 ))
                 .collect(Collectors.toList());
     }
+    public void importCSVFile(MultipartFile file) throws IOException {
+        // Đường dẫn thư mục và tệp cố định
+        String filePath = "F:/Note/filetestphongmay.csv";  // Sử dụng đường dẫn tệp đầy đủ
+
+        // Câu lệnh SQL LOAD DATA INFILE
+        String fieldsTerminated = ",";  // Field separator for CSV file
+        String optionallyEnclosed = "\"";  // Enclosure for values (if any)
+        String linesTerminated = "\n";  // Line separator
+        int ignoreRow = 1;  // Skip the header row
+
+        // Thay đổi đường dẫn tệp theo định dạng của MySQL (sử dụng dấu gạch chéo)
+        String loadSql = "LOAD DATA INFILE '" + filePath.replace("\\", "/") + "' " +
+                "INTO TABLE phong_may " +
+                "FIELDS TERMINATED BY '" + fieldsTerminated + "' " +
+                "OPTIONALLY ENCLOSED BY '" + optionallyEnclosed + "' " +
+                "LINES TERMINATED BY '" + linesTerminated + "' " +
+                "IGNORE " + ignoreRow + " ROWS " +
+                "(ten_phong, so_may, mo_ta, trang_thai, ma_tang)";
+
+        try {
+            // Thực thi câu lệnh SQL
+            jdbcTemplate.execute(loadSql);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new IOException("Có lỗi xảy ra trong quá trình import: " + e.getMessage());
+        }
+    }
+    public List<QRDTO> layDanhSachPhongMayVaThongKe(String token) {
+        if (!isUserLoggedIn(token)) {
+            return null;
+        }
+
+        List<PhongMay> danhSachPhongMay = phongMayRepository.findAll();
+        return danhSachPhongMay.stream().map(phongMay -> {
+            List<MayTinh> mayDangHoatDong = phongMay.getMayTinhs().stream()
+                    .filter(mayTinh -> "Đang hoạt động".equals(mayTinh.getTrangThai()))
+                    .collect(Collectors.toList());
+
+            List<MayTinh> mayDaHong = phongMay.getMayTinhs().stream()
+                    .filter(mayTinh -> "Đã hỏng".equals(mayTinh.getTrangThai()))
+                    .collect(Collectors.toList());
+
+            // Chuyển đổi List<MayTinh> sang List<MayTinhDTO>
+            List<MayTinhDTO> mayDangHoatDongDTO = mayDangHoatDong.stream()
+                    .map(mayTinh -> new MayTinhDTO(mayTinh.getMaMay(), mayTinh.getTenMay(), mayTinh.getTrangThai(), mayTinh.getMoTa()))
+                    .collect(Collectors.toList());
+
+            List<MayTinhDTO> mayDaHongDTO = mayDaHong.stream()
+                    .map(mayTinh -> new MayTinhDTO(mayTinh.getMaMay(),mayTinh.getTenMay(), mayTinh.getTrangThai(), mayTinh.getMoTa()))
+                    .collect(Collectors.toList());
+
+            return new QRDTO(
+                    phongMay.getTenPhong(),
+                    mayDangHoatDong.size(),
+                    mayDaHong.size(),
+                    mayDangHoatDongDTO,
+                    mayDaHongDTO
+            );
+        }).collect(Collectors.toList());
+    }
+
 }
