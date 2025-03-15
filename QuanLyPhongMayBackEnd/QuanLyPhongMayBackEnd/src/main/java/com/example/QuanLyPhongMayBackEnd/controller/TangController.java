@@ -98,6 +98,20 @@ public class TangController {
             throw new RuntimeException("Có lỗi xảy ra khi lấy tầng theo mã: " + e.getMessage(), e);
         }
     }
+    @PostMapping("/previewCSV")
+    public ResponseEntity<List<String[]>> previewCSV(@RequestParam("file") MultipartFile file, @RequestParam String token) {
+        try {
+            // Kiểm tra token
+
+
+            // Gọi phương thức previewCSVFile để lấy toàn bộ nội dung
+            List<String[]> previewData = tangService.previewCSVFile(file,token);
+            return ResponseEntity.ok(previewData);  // Trả về dữ liệu dưới dạng JSON
+        } catch (Exception e) {
+            Sentry.captureException(e); // Gửi tất cả exception tới Sentry
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null); // Trả về lỗi server nếu có exception
+        }
+    }
 
     @PostMapping("/importTang")
     public String importTangsFromCSV(@RequestParam("file") MultipartFile file, @RequestParam String token) {

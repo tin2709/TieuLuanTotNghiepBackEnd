@@ -114,6 +114,30 @@ public class TangService {
         }
         return tangRepository.countByToaNha_MaToaNha(maToaNha);
     }
+    public List<String[]> previewCSVFile(MultipartFile file,String token) throws Exception {
+        if (!isUserLoggedIn(token)) {
+            return null; // Token không hợp lệ
+        }
+        // Kiểm tra nếu file không rỗng
+        if (file.isEmpty()) {
+            throw new Exception("File rỗng");
+        }
+
+        // Đọc toàn bộ file CSV sử dụng OpenCSV
+        List<String[]> previewData = new ArrayList<>();
+        try (Reader reader = new InputStreamReader(file.getInputStream(), "UTF-8")) {
+            CSVReader csvReader = new CSVReader(reader);
+            String[] nextLine;
+
+            // Đọc tất cả các dòng trong file CSV
+            while ((nextLine = csvReader.readNext()) != null) {
+                previewData.add(nextLine);
+            }
+        } catch (IOException e) {
+            throw new Exception("Lỗi khi đọc file CSV: " + e.getMessage());
+        }
+        return previewData;
+    }
     @Transactional
     public void importCSVFile(MultipartFile file) throws Exception {
         // Kiểm tra nếu file không rỗng
