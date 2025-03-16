@@ -11,9 +11,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @RestController
 @CrossOrigin
@@ -24,6 +26,46 @@ public class TangController {
 
     @Autowired
     private ToaNhaService toaNhaService;
+    // Sử dụng danh sách để lưu trữ tất cả các emitter
+    private List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
+
+    // Endpoint cho các client đăng ký nhận thông báo (không sử dụng clientId)
+    @GetMapping("/subscribe")
+    public SseEmitter subscribe() {
+        SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
+
+        // Thêm emitter vào danh sách khi có client kết nối
+        emitters.add(emitter);
+
+        // Khi emitter hoàn thành, bị lỗi hoặc timeout thì sẽ xóa khỏi danh sách
+        emitter.onCompletion(() -> emitters.remove(emitter));
+        emitter.onTimeout(() -> emitters.remove(emitter));
+        emitter.onError(e -> {
+            Sentry.captureException(e);  // Capture lỗi vào Sentry
+            emitters.remove(emitter);
+        });
+
+        // Gửi thông báo "subscribed" cho client khi họ đăng ký
+        try {
+            emitter.send(SseEmitter.event().data("subscribed"));
+        } catch (IOException e) {
+            emitter.completeWithError(e);
+        }
+
+        return emitter;
+    }
+
+    // Phương thức gửi thông báo tới tất cả các client
+    private String notifyClients(String message) {
+        for (SseEmitter emitter : emitters) {
+            try {
+                emitter.send(SseEmitter.event().data(message));
+            } catch (IOException e) {
+                emitter.completeWithError(e);
+            }
+        }
+        return message;
+    }
 
     @PostMapping("/LuuTang")
     public Tang luu(@RequestParam String tenTang, @RequestParam Long maToaNha, @RequestParam String token) {
@@ -53,7 +95,8 @@ public class TangController {
     public String xoa(@RequestParam Long maTang, @RequestParam String token) {
         try {
             tangService.xoa(maTang, token);
-            return "Đã xoá tầng " + maTang;
+//            notifyClients("Floor deleted: " + maTang);
+            return notifyClients("Floor deleted: " + maTang);
         } catch (Exception e) {
             Sentry.captureException(e); // Gửi tất cả exception tới Sentry
             throw new RuntimeException("Có lỗi xảy ra khi xoá tầng: " + e.getMessage(), e);
