@@ -1,4 +1,5 @@
 package com.example.QuanLyPhongMayBackEnd.service;
+
 import com.example.QuanLyPhongMayBackEnd.DTO.MayTinhDTO;
 import com.example.QuanLyPhongMayBackEnd.DTO.PhongMayDTO;
 import com.example.QuanLyPhongMayBackEnd.DTO.QRDTO;
@@ -8,27 +9,36 @@ import com.example.QuanLyPhongMayBackEnd.entity.PhongMay;
 import com.example.QuanLyPhongMayBackEnd.entity.Tang;
 import com.example.QuanLyPhongMayBackEnd.repository.PhongMayRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.TangRepository;
+import com.example.QuanLyPhongMayBackEnd.security.JwtUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.sql.SQLException;
+import java.io.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Scanner;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 
 @Service
 public class PhongMayService {
+
+    private static final Logger logger = LogManager.getLogger(PhongMayService.class);
+    private static final String LOG_FILE_PATH = "F:/Note/log.txt";
+    private static String currentDate = ""; // To keep track of the current date in memory
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -36,221 +46,463 @@ public class PhongMayService {
     @Autowired
     private MayTinhService mayTinhService;
 
-
     @Autowired
     private CaThucHanhService caThucHanhService;
 
     @Autowired
     private PhongMayRepository phongMayRepository;
+
     @Autowired
     private TaiKhoanService taiKhoanService;
+
     @Autowired
     private GhiChuMayTinhService ghiChuMayTinhService;
+
     @Autowired
     private GhiChuPhongMayService ghiChuPhongMayService;
+
     @Autowired
     private TangRepository tangRepository;
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    @Scheduled(cron = "0 0 0 * * ?") // Run every day at 00:00:00
+    public void dailyLogSummary() {
+        LocalDateTime yesterday = LocalDateTime.now().minusDays(1);
+        String yesterdayDate = yesterday.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        int logCount = countLogsForDate(yesterdayDate);
+        logger.info("Log summary for " + yesterdayDate + ": " + logCount + " log entries.");
+
+        // Write the summary to the log file
+        try (PrintWriter out = new PrintWriter(new FileWriter(LOG_FILE_PATH, true))) {
+            File logFile = new File(LOG_FILE_PATH);
+            if (!logFile.exists()) {
+                try {
+                    logFile.createNewFile();
+                } catch (IOException e) {
+                    logger.error("Error creating log file", e);
+                    return; // Exit if we can't create the file
+                }
+            }
+            out.println("Log summary for " + yesterdayDate + ": " + logCount + " log entries.");
+        } catch (IOException e) {
+            logger.error("Error writing log summary to file", e);
+        }
+    }
+    private int countLogsForDate(String date) {
+        File logFile = new File(LOG_FILE_PATH);
+        if (!logFile.exists()) {
+            return 0; // No log file, so no logs
+        }
+
+        int count = 0;
+        try (Scanner scanner = new Scanner(logFile)) {
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                if (line.startsWith(date)) { // Count date header as a log entry
+                    count++;
+                } else if (line.matches("\\d{2}:\\d{2}:\\d{2} -.*")) {
+                    count++; // Log entry (time - message)
+                }
+            }
+        } catch (FileNotFoundException e) {
+            logger.error("Log file not found", e); // Should not happen, we checked existence
+        }
+        return count;
+    }
+
+
+    private void writeLog(String username, String message) {
+        LocalDateTime now = LocalDateTime.now();
+        String formattedTime = now.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+        String formattedDate = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+
+        // Check if the log file exists. Create it if it doesn't.
+        File logFile = new File(LOG_FILE_PATH);
+        if (!logFile.exists()) {
+            try {
+                logFile.createNewFile();
+                currentDate = ""; // Reset currentDate when creating a new file
+            } catch (IOException e) {
+                logger.error("Error creating log file", e);
+                return; // Exit if we can't create the file
+            }
+        }
+
+        try (PrintWriter out = new PrintWriter(new FileWriter(LOG_FILE_PATH, true))) {
+            // Check if the date header needs to be written
+            if (!currentDate.equals(formattedDate)) {
+                // Check if the date is already present in the file
+                if (!isDatePresentInLog(formattedDate)) {
+                    out.println(formattedDate);
+                }
+                currentDate = formattedDate; // Update the in-memory current date
+            }
+            out.println(formattedTime + " - User: " + (username != null ? username : "Unknown") + " - " + message);
+        } catch (IOException e) {
+            logger.error("Error writing to log file", e);
+        }
+    }
+
+    private boolean isDatePresentInLog(String date) {
+        File logFile = new File(LOG_FILE_PATH);
+        if (!logFile.exists()) {
+            return false; // No log file, so date cannot be present
+        }
+
+        try (Scanner scanner = new Scanner(logFile)) {
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                if (line.trim().equals(date)) {
+                    return true; // Date found
+                }
+            }
+        } catch (FileNotFoundException e) {
+            logger.error("Log file not found", e); //Should not happen
+            return false; // Return false in error
+        }
+        return false; // Date not found
+    }
+
+
+
     public boolean isUserLoggedIn(String token) {
-        return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
+        String username = null;
+        try{
+            username = jwtUtil.getUsernameFromToken(token);
+        } catch (Exception e){
+
+        }
+        boolean isLoggedIn = taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
+        writeLog(username, "isUserLoggedIn: " + isLoggedIn);
+        return isLoggedIn;
     }
 
     public PhongMay layPhongMayTheoMa(Long maPhong, String token) {
+        String username = null;
+        try {
+            username = jwtUtil.getUsernameFromToken(token); // Get username
+        } catch (Exception e) {
+            writeLog(null, "layPhongMayTheoMa - Error getting username from token: " + e.getMessage());
+        }
+
         if (!isUserLoggedIn(token)) {
+            writeLog(username, "layPhongMayTheoMa - User not logged in.  maPhong: " + maPhong);
             return null; // Token không hợp lệ
         }
         PhongMay phongMay = null;
         Optional<PhongMay> kq = phongMayRepository.findById(maPhong);
         try {
             phongMay = kq.get();
+            writeLog(username, "layPhongMayTheoMa - Success. maPhong: " + maPhong);
             return phongMay;
         } catch (Exception e) {
+            writeLog(username, "layPhongMayTheoMa - Error: " + e.getMessage() + ". maPhong: " + maPhong);
             return phongMay;
         }
     }
+
     public PhongMay capNhatTheoMaTang(Long maTang, PhongMay phongMay, String token) {
-        // Kiểm tra lại quyền người dùng
-        if (!isUserLoggedIn(token)) {
-            return null; // Token không hợp lệ
+        String username = null;
+        try {
+            username = jwtUtil.getUsernameFromToken(token);
+        } catch (Exception e) {
+            writeLog(null, "capNhatTheoMaTang - Error getting username from token: " + e.getMessage());
         }
 
-        // Kiểm tra nếu maTang có tồn tại phòng máy
+        if (!isUserLoggedIn(token)) {
+            writeLog(username, "capNhatTheoMaTang - User not logged in. maTang: " + maTang);
+            return null;
+        }
+
         List<PhongMay> danhSachPhongMay = phongMayRepository.findByTang_MaTang(maTang);
         if (danhSachPhongMay.isEmpty()) {
+            writeLog(username, "capNhatTheoMaTang - No rooms found for maTang: " + maTang);
             throw new IllegalArgumentException("Không tìm thấy phòng máy thuộc tầng với maTang: " + maTang);
         }
 
-        // Cập nhật thông tin phòng máy (ví dụ lấy phòng máy đầu tiên từ danh sách)
-        PhongMay phongMayToUpdate = danhSachPhongMay.get(0);  // Hoặc logic lấy phòng máy cụ thể nào đó
+        PhongMay phongMayToUpdate = danhSachPhongMay.get(0);
         phongMayToUpdate.setTenPhong(phongMay.getTenPhong());
         phongMayToUpdate.setSoMay(phongMay.getSoMay());
         phongMayToUpdate.setMoTa(phongMay.getMoTa());
         phongMayToUpdate.setTrangThai(phongMay.getTrangThai());
-        phongMayToUpdate.setTang(phongMay.getTang());  // Cập nhật lại tầng cho phòng máy
+        phongMayToUpdate.setTang(phongMay.getTang());
 
-        // Lưu thông tin phòng máy đã cập nhật
-        return phongMayRepository.save(phongMayToUpdate);
+        try {
+            PhongMay updatedPhongMay = phongMayRepository.save(phongMayToUpdate);
+            writeLog(username, "capNhatTheoMaTang - Success. maTang: " + maTang);
+            return updatedPhongMay;
+        } catch (Exception e) {
+            writeLog(username, "capNhatTheoMaTang - Error: " + e.getMessage() + ". maTang: " + maTang);
+            throw e;  // Re-throw after logging.  Important!
+        }
     }
 
     public List<PhongMay> findByTrangThai(String trangThai, String token) {
-        if (!isUserLoggedIn(token)) {
-            return null; // Token không hợp lệ
+        String username = null;
+        try {
+            username = jwtUtil.getUsernameFromToken(token);
+        } catch (Exception e) {
+            writeLog(null, "findByTrangThai - Error getting username from token: " + e.getMessage());
         }
-        return phongMayRepository.findByTrangThai(trangThai);
+
+        if (!isUserLoggedIn(token)) {
+            writeLog(username, "findByTrangThai - User not logged in. trangThai: " + trangThai);
+            return null;
+        }
+
+        try {
+            List<PhongMay> result = phongMayRepository.findByTrangThai(trangThai);
+            writeLog(username, "findByTrangThai - Success. trangThai: " + trangThai + ", Result size: " + result.size());
+            return result;
+        } catch (Exception e) {
+            writeLog(username, "findByTrangThai - Error: " + e.getMessage()+ ". trangThai: " + trangThai);
+            throw e;
+        }
+    }
+    public List<PhongMay> layDSPhongMay(String token) {
+        String username = null;
+        try {
+            username = jwtUtil.getUsernameFromToken(token);
+        } catch (Exception e) {
+            writeLog(null, "layDSPhongMay - Error getting username from token: " + e.getMessage());
+        }
+
+        if (!isUserLoggedIn(token)) {
+            writeLog(username, "layDSPhongMay - User not logged in.");
+            return null;
+        }
+        try {
+            List<PhongMay> result = phongMayRepository.findAll();
+            writeLog(username, "layDSPhongMay - Success. Result size: " + result.size());
+            return result;
+        } catch(Exception ex){
+            writeLog(username, "layDSPhongMay - Error: " + ex.getMessage());
+            throw ex;
+        }
     }
 
-    public List<PhongMay> layDSPhongMay(String token) {
-        if (!isUserLoggedIn(token)) {
-            return null; // Token không hợp lệ
-        }
-        return phongMayRepository.findAll();
-    }
 
     @Transactional
     public void xoa(Long maPhong, String token) {
+        String username = null;
+        try {
+            username = jwtUtil.getUsernameFromToken(token);
+        } catch (Exception e) {
+            writeLog(null, "xoa - Error getting username from token: " + e.getMessage());
+        }
+
         if (!isUserLoggedIn(token)) {
-            return; // Token không hợp lệ
+            writeLog(username, "xoa - User not logged in. maPhong: " + maPhong);
+            return;
         }
+        try {
+            List<MayTinh> danhSachMayTinh = mayTinhService.layDSMayTinhTheoMaPhong(maPhong, token);
+            List<CaThucHanh> danhSachCaThucHanh = caThucHanhService.layDSCaThucHanhTheoMaPhong(maPhong, token);
+            ghiChuPhongMayService.xoaByMaPhong(maPhong, token);
 
-        // Get the list of computers in the room
-        List<MayTinh> danhSachMayTinh = mayTinhService.layDSMayTinhTheoMaPhong(maPhong, token);
+            for (MayTinh mayTinh : danhSachMayTinh) {
+                ghiChuMayTinhService.xoaTheoMaMay(mayTinh.getMaMay(), token);
+            }
 
-        // Get the list of practice shifts associated with the room
-        List<CaThucHanh> danhSachCaThucHanh = caThucHanhService.layDSCaThucHanhTheoMaPhong(maPhong, token);
-        ghiChuPhongMayService.xoaByMaPhong(maPhong, token);
+            for (MayTinh mayTinh : danhSachMayTinh) {
+                mayTinhService.xoa(mayTinh.getMaMay(), token);
+            }
 
-        // Delete all entries in the ghi_chu_may_tinh table that reference the computers
-        for (MayTinh mayTinh : danhSachMayTinh) {
-            // Assuming ghiChuMayTinhService can delete records by maMay
-            ghiChuMayTinhService.xoaTheoMaMay(mayTinh.getMaMay(), token);
+            for (CaThucHanh caThucHanh : danhSachCaThucHanh) {
+                caThucHanhService.xoa(caThucHanh.getMaCa(), token);
+            }
+
+            phongMayRepository.deleteById(maPhong);
+            entityManager.flush();
+            entityManager.clear();
+            writeLog(username, "xoa - Success. maPhong: " + maPhong);
+
+        } catch (Exception e) {
+            writeLog(username, "xoa - Error: " + e.getMessage()+ ". maPhong: " + maPhong);
+            throw e;  // Re-throw after logging.
         }
-
-        // Delete all computers in the room
-        for (MayTinh mayTinh : danhSachMayTinh) {
-            mayTinhService.xoa(mayTinh.getMaMay(), token);
-        }
-
-        // Delete all practice shifts associated with the room
-        for (CaThucHanh caThucHanh : danhSachCaThucHanh) {
-            caThucHanhService.xoa(caThucHanh.getMaCa(), token);
-        }
-
-        // Finally, delete the room itself
-        phongMayRepository.deleteById(maPhong);
-
-        // Ensure changes are flushed to the database immediately
-        entityManager.flush();
-        entityManager.clear();
     }
 
     public PhongMay luu(PhongMay phongMay, String token) {
-        if (!isUserLoggedIn(token)) {
-            return null; // Token không hợp lệ
+        String username = null;
+        try {
+            username = jwtUtil.getUsernameFromToken(token);
+        } catch (Exception e) {
+            writeLog(null, "luu - Error getting username from token: " + e.getMessage());
         }
-        return phongMayRepository.save(phongMay);
+
+        if (!isUserLoggedIn(token)) {
+            writeLog(username, "luu - User not logged in.");
+            return null;
+        }
+        try {
+            PhongMay savedPhongMay = phongMayRepository.save(phongMay);
+            writeLog(username, "luu - Success. Room saved: " + savedPhongMay.getMaPhong());
+            return savedPhongMay;
+        } catch (Exception e) {
+            writeLog(username, "luu - Error saving room: " + e.getMessage());
+            throw new RuntimeException("Room creation failed. Database error.", e); // More specific exception
+        }
     }
 
+
     public PhongMay capNhatTheoMa(Long maPhong, String tenPhong, int soMay, String moTa, String trangThai, Long maTang, String token) {
+        String username = null;
+        try {
+            username = jwtUtil.getUsernameFromToken(token);
+        } catch (Exception e) {
+            writeLog(null, "capNhatTheoMa - Error getting username from token: " + e.getMessage());
+        }
+
         if (!isUserLoggedIn(token)) {
-            return null; // Token không hợp lệ
+            writeLog(username, "capNhatTheoMa - User not logged in. maPhong: " + maPhong);
+            return null;
         }
 
         Optional<PhongMay> phongMayDB = phongMayRepository.findById(maPhong);
         if (phongMayDB.isPresent()) {
             PhongMay phongMayCu = phongMayDB.get();
 
-            // Cập nhật thông tin từ request
             phongMayCu.setTenPhong(tenPhong);
             phongMayCu.setSoMay(soMay);
             phongMayCu.setMoTa(moTa);
             phongMayCu.setTrangThai(trangThai);
 
-            // Tìm Tang theo maTang
             Optional<Tang> tangOptional = tangRepository.findById(maTang);
             if (!tangOptional.isPresent()) {
-                // Handle case where Tang is not found
-                return null; // Or throw an exception
+                writeLog(username, "capNhatTheoMa - Tang not found. maTang: " + maTang);
+                return null; // Or throw an exception - better practice!
             }
             Tang tang = tangOptional.get();
-            phongMayCu.setTang(tang); // Set the Tang object
-
-            // Lưu lại vào cơ sở dữ liệu
-            return phongMayRepository.save(phongMayCu);
+            phongMayCu.setTang(tang);
+            try {
+                PhongMay updatedPhongMay = phongMayRepository.save(phongMayCu);
+                writeLog(username, "capNhatTheoMa - Success. maPhong: " + maPhong);
+                return updatedPhongMay;
+            } catch (Exception e) {
+                writeLog(username, "capNhatTheoMa - Error saving room: " + e.getMessage() + ". maPhong: " + maPhong);
+                throw new RuntimeException("Room update failed. Database error.", e);
+            }
         }
-        return null;
+        writeLog(username, "capNhatTheoMa - Room not found. maPhong: " + maPhong);
+        return null; // Or throw an exception - MUCH better practice
     }
+
 
     public List<PhongMay> layPhongMayTheoMaTang(Long maTang, String token) {
-        if (!isUserLoggedIn(token)) {
-            return null; // Token không hợp lệ
+        String username = null;
+        try {
+            username = jwtUtil.getUsernameFromToken(token);
+        } catch (Exception e) {
+            writeLog(null, "layPhongMayTheoMaTang - Error getting username from token: " + e.getMessage());
         }
-        return phongMayRepository.findByTang_MaTang(maTang);
+
+        if (!isUserLoggedIn(token)) {
+            writeLog(username, "layPhongMayTheoMaTang - User not logged in. maTang: " + maTang);
+            return null;
+        }
+
+        try {
+            List<PhongMay> result = phongMayRepository.findByTang_MaTang(maTang);
+            writeLog(username, "layPhongMayTheoMaTang - Success. maTang: " + maTang + ", Result size: " + result.size());
+            return result;
+        } catch (Exception e) {
+            writeLog(username, "layPhongMayTheoMaTang - Error: " + e.getMessage() + ". maTang: " + maTang);
+            throw e; // Re-throw the exception
+        }
     }
 
+
     public List<PhongMayDTO> timKiemPhongMay(String keyword, String token) {
-        // Ensure the user is logged in (you can implement token verification here)
-        if (!isUserLoggedIn(token)) {
-            return null; // Invalid token
+        String username = null;
+        try {
+            username = jwtUtil.getUsernameFromToken(token);
+        } catch (Exception e) {
+            writeLog(null, "timKiemPhongMay - Error getting username from token: " + e.getMessage());
         }
 
-        // Split the keyword into column and value
+        if (!isUserLoggedIn(token)) {
+            writeLog(username, "timKiemPhongMay - User not logged in. keyword: " + keyword);
+            return null;
+        }
+
         String[] parts = keyword.split(":");
         if (parts.length != 2) {
-            return null; // Invalid keyword format
+            writeLog(username, "timKiemPhongMay - Invalid keyword format. keyword: " + keyword);
+            return null;
         }
 
         String column = parts[0].trim();
         String value = parts[1].trim();
 
-        // Define valid columns for search
         List<String> validColumns = Arrays.asList("ten_phong", "so_may", "mo_ta", "trang_thai");
         if (!validColumns.contains(column)) {
-            return null; // Invalid column name
+            writeLog(username, "timKiemPhongMay - Invalid column name. column: " + column);
+            return null;
         }
 
-        // Build the Specification for dynamic search
+        String finalUsername = username;
         Specification<PhongMay> specification = (root, query, criteriaBuilder) -> {
-            switch (column) {
-                case "ten_phong":
-                    return criteriaBuilder.like(root.get("tenPhong"), "%" + value + "%");
-                case "so_may":
-                    return criteriaBuilder.equal(root.get("soMay"), Integer.parseInt(value));
-                case "mo_ta":
-                    return criteriaBuilder.like(root.get("moTa"), "%" + value + "%");
-                case "trang_thai":
-                    return criteriaBuilder.like(root.get("trangThai"), "%" + value + "%");
-                default:
-                    return null;
+            try {
+                switch (column) {
+                    case "ten_phong":
+                        return criteriaBuilder.like(root.get("tenPhong"), "%" + value + "%");
+                    case "so_may":
+                        return criteriaBuilder.equal(root.get("soMay"), Integer.parseInt(value));
+                    case "mo_ta":
+                        return criteriaBuilder.like(root.get("moTa"), "%" + value + "%");
+                    case "trang_thai":
+                        return criteriaBuilder.like(root.get("trangThai"), "%" + value + "%");
+                    default:
+                        return null;
+                }
+            } catch (NumberFormatException e) {
+                writeLog(finalUsername, "timKiemPhongMay - Invalid number format for column 'so_may'. value: " + value);
+                return null; // Or throw an exception
             }
         };
 
-        // Query the database using the Specification
-        List<PhongMay> results = phongMayRepository.findAll(specification);
-
-        // Map results to DTOs
-        return results.stream()
-                .map(pm -> new PhongMayDTO(
-                        pm.getMaPhong(),
-                        pm.getTenPhong(),
-                        pm.getSoMay(),
-                        pm.getMoTa(),
-                        pm.getTrangThai()
-
-                ))
-                .collect(Collectors.toList());
+        try {
+            List<PhongMay> results = phongMayRepository.findAll(specification);
+            List<PhongMayDTO> resultDTOs = results.stream()
+                    .map(pm -> new PhongMayDTO(
+                            pm.getMaPhong(),
+                            pm.getTenPhong(),
+                            pm.getSoMay(),
+                            pm.getMoTa(),
+                            pm.getTrangThai()
+                    ))
+                    .collect(Collectors.toList());
+            writeLog(username, "timKiemPhongMay - Success. keyword: " + keyword + ", Result size: " + resultDTOs.size());
+            return resultDTOs;
+        } catch (Exception e) {
+            writeLog(username, "timKiemPhongMay - Error: " + e.getMessage()+ ". keyword: " + keyword);
+            throw e;
+        }
     }
-    public void importCSVFile(MultipartFile file) throws IOException {
-        // Đường dẫn thư mục và tệp cố định
-        String filePath = "F:/Note/filetestphongmay.csv";  // Sử dụng đường dẫn tệp đầy đủ
+    public void importCSVFile(MultipartFile file, String token) throws IOException {
+        String username = null;
+        try {
+            username = jwtUtil.getUsernameFromToken(token);
+        } catch (Exception e) {
+            writeLog(null, "importCSVFile - Error getting username from token: " + e.getMessage());
+        }
+        if (!isUserLoggedIn(token)) {
+            writeLog(username, "importCSVFile - User not logged in.");
+            return ;
+        }
 
-        // Câu lệnh SQL LOAD DATA INFILE
-        String fieldsTerminated = ",";  // Field separator for CSV file
-        String optionallyEnclosed = "\"";  // Enclosure for values (if any)
-        String linesTerminated = "\n";  // Line separator
-        int ignoreRow = 1;  // Skip the header row
+        String filePath = "F:/Note/filetestphongmay.csv";
+        String fieldsTerminated = ",";
+        String optionallyEnclosed = "\"";
+        String linesTerminated = "\n";
+        int ignoreRow = 1;
 
-        // Thay đổi đường dẫn tệp theo định dạng của MySQL (sử dụng dấu gạch chéo)
         String loadSql = "LOAD DATA INFILE '" + filePath.replace("\\", "/") + "' " +
                 "INTO TABLE phong_may " +
                 "FIELDS TERMINATED BY '" + fieldsTerminated + "' " +
@@ -260,45 +512,60 @@ public class PhongMayService {
                 "(ten_phong, so_may, mo_ta, trang_thai, ma_tang)";
 
         try {
-            // Thực thi câu lệnh SQL
             jdbcTemplate.execute(loadSql);
+            writeLog(username, "importCSVFile - Success. File: " + file.getOriginalFilename());
         } catch (Exception e) {
-            e.printStackTrace();
-            throw new IOException("Có lỗi xảy ra trong quá trình import: " + e.getMessage());
+            writeLog(username, "importCSVFile - Error: " + e.getMessage() + ". File: " + file.getOriginalFilename());
+            throw new IOException("Có lỗi xảy ra trong quá trình import: " + e.getMessage(), e); // Include original exception
         }
     }
+
     public List<QRDTO> layDanhSachPhongMayVaThongKe(String token) {
-        if (!isUserLoggedIn(token)) {
-            return null;
+        String username = null;
+        try {
+            username = jwtUtil.getUsernameFromToken(token);
+        } catch (Exception e) {
+            writeLog(null, "layDanhSachPhongMayVaThongKe - Error getting username from token: " + e.getMessage());
         }
 
-        List<PhongMay> danhSachPhongMay = phongMayRepository.findAll();
-        return danhSachPhongMay.stream().map(phongMay -> {
-            List<MayTinh> mayDangHoatDong = phongMay.getMayTinhs().stream()
-                    .filter(mayTinh -> "Đang hoạt động".equals(mayTinh.getTrangThai()))
-                    .collect(Collectors.toList());
+        if (!isUserLoggedIn(token)) {
+            writeLog(username, "layDanhSachPhongMayVaThongKe - User not logged in.");
+            return null;
+        }
+        try {
+            List<PhongMay> danhSachPhongMay = phongMayRepository.findAll();
+            List<QRDTO> result = danhSachPhongMay.stream().map(phongMay -> {
+                List<MayTinh> mayDangHoatDong = phongMay.getMayTinhs().stream()
+                        .filter(mayTinh -> "Đang hoạt động".equals(mayTinh.getTrangThai()))
+                        .collect(Collectors.toList());
 
-            List<MayTinh> mayDaHong = phongMay.getMayTinhs().stream()
-                    .filter(mayTinh -> "Đã hỏng".equals(mayTinh.getTrangThai()))
-                    .collect(Collectors.toList());
+                List<MayTinh> mayDaHong = phongMay.getMayTinhs().stream()
+                        .filter(mayTinh -> "Đã hỏng".equals(mayTinh.getTrangThai()))
+                        .collect(Collectors.toList());
 
-            // Chuyển đổi List<MayTinh> sang List<MayTinhDTO>
-            List<MayTinhDTO> mayDangHoatDongDTO = mayDangHoatDong.stream()
-                    .map(mayTinh -> new MayTinhDTO(mayTinh.getMaMay(), mayTinh.getTenMay(), mayTinh.getTrangThai(), mayTinh.getMoTa()))
-                    .collect(Collectors.toList());
+                List<MayTinhDTO> mayDangHoatDongDTO = mayDangHoatDong.stream()
+                        .map(mayTinh -> new MayTinhDTO(mayTinh.getMaMay(), mayTinh.getTenMay(), mayTinh.getTrangThai(), mayTinh.getMoTa()))
+                        .collect(Collectors.toList());
 
-            List<MayTinhDTO> mayDaHongDTO = mayDaHong.stream()
-                    .map(mayTinh -> new MayTinhDTO(mayTinh.getMaMay(),mayTinh.getTenMay(), mayTinh.getTrangThai(), mayTinh.getMoTa()))
-                    .collect(Collectors.toList());
+                List<MayTinhDTO> mayDaHongDTO = mayDaHong.stream()
+                        .map(mayTinh -> new MayTinhDTO(mayTinh.getMaMay(), mayTinh.getTenMay(), mayTinh.getTrangThai(), mayTinh.getMoTa()))
+                        .collect(Collectors.toList());
 
-            return new QRDTO(
-                    phongMay.getTenPhong(),
-                    mayDangHoatDong.size(),
-                    mayDaHong.size(),
-                    mayDangHoatDongDTO,
-                    mayDaHongDTO
-            );
-        }).collect(Collectors.toList());
+                return new QRDTO(
+                        phongMay.getTenPhong(),
+                        mayDangHoatDong.size(),
+                        mayDaHong.size(),
+                        mayDangHoatDongDTO,
+                        mayDaHongDTO
+                );
+            }).collect(Collectors.toList());
+
+            writeLog(username, "layDanhSachPhongMayVaThongKe - Success. Result size: " + result.size());
+            return result;
+        } catch (Exception e){
+            writeLog(username, "layDanhSachPhongMayVaThongKe - Error: " + e.getMessage());
+            throw e;
+        }
     }
 
 }
