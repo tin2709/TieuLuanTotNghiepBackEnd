@@ -162,7 +162,7 @@ public class PhongMayController {
             return "Token không hợp lệ!";
         }
         try {
-            phongMayService.importCSVFile(file);
+            phongMayService.importCSVFile(file, token);
             return "Import dữ liệu thành công!";
         } catch (IOException e) {
             return "Có lỗi xảy ra khi xử lý file CSV: " + e.getMessage();
