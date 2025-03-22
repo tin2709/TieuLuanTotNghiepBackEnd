@@ -1,3 +1,4 @@
+// MayTinhService.java
 package com.example.QuanLyPhongMayBackEnd.service;
 
 import com.example.QuanLyPhongMayBackEnd.entity.MayTinh;
@@ -21,7 +22,7 @@ public class MayTinhService {
     private PhongMayRepository phongMayRepository;
     @Autowired
     private TaiKhoanService taiKhoanService;
-    private boolean isUserLoggedIn(String token) {
+    public boolean isUserLoggedIn(String token) {
         return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
     }
     // Phương thức lấy máy tính theo mã
@@ -87,5 +88,13 @@ public class MayTinhService {
         }
         Optional<PhongMay> phongMayOptional = phongMayRepository.findById(maPhong);
         return phongMayOptional.orElse(null);  // Trả về null nếu không tìm thấy
+    }
+    //update
+    @Transactional
+    public MayTinh capNhatMayTinh(MayTinh mayTinh, String token){
+        if (!isUserLoggedIn(token)) {
+            return null;
+        }
+        return mayTinhRepository.save(mayTinh);
     }
 }
