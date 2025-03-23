@@ -20,7 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
+        import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -138,6 +138,43 @@ public class TaiKhoanController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
+    @GetMapping("/checkUser")
+    public ResponseEntity<Map<String, Object>> checkUser(@RequestParam String username,
+                                                         @RequestParam String password) {
+        Map<String, Object> response = new HashMap<>();
+
+        // Tìm tài khoản trong cơ sở dữ liệu dựa vào tên đăng nhập
+        Optional<TaiKhoan> taiKhoanOptional = taiKhoanRepository.findByTenDangNhap(username);
+
+        if (taiKhoanOptional.isPresent()) {
+            TaiKhoan taiKhoan = taiKhoanOptional.get();
+
+            // Kiểm tra nếu mật khẩu đã mã hóa đúng
+            if (passwordEncoder.matches(password, taiKhoan.getMatKhau())) {
+                response.put("status", "success");
+                response.put("message", "User found");
+                response.put("data", Map.of(
+                        "maTK", taiKhoan.getMaTK(),
+                        "tenDangNhap", taiKhoan.getTenDangNhap(),
+                        "quyen", taiKhoan.getQuyen().getMaQuyen(), // Giả sử quyen có phương thức getMaQuyen()
+                        "email", taiKhoan.getEmail(),
+                        "image", taiKhoan.getImage(),
+                        "isBanned", taiKhoan.isBanned() // Thêm thuộc tính isBanned vào response
+                ));
+            } else {
+                // Mật khẩu không đúng
+                response.put("status", "error");
+                response.put("message", "Invalid username or password");
+            }
+        } else {
+            // Tài khoản không tồn tại
+            response.put("status", "error");
+            response.put("message", "User not found");
+        }
+
+        return new ResponseEntity<>(response, response.get("status").equals("success") ? HttpStatus.OK : HttpStatus.BAD_REQUEST);
+    }
+
 
     @GetMapping("/checkingLogin")
     public ResponseEntity<Map<String, Object>> checkingLogin(@RequestParam String username,
@@ -158,7 +195,8 @@ public class TaiKhoanController {
                 response.put("data", Map.of(
                         "maTK", taiKhoan.getMaTK(),
                         "tenDangNhap", taiKhoan.getTenDangNhap(),
-                        "quyen", taiKhoan.getQuyen().getMaQuyen() // Giả sử quyen có phương thức getRole_id()
+                        "quyen", taiKhoan.getQuyen().getMaQuyen(), // Giả sử quyen có phương thức getMaQuyen()
+                        "isBanned", taiKhoan.isBanned() // Thêm thuộc tính isBanned vào response
                 ));
             } else {
                 // Username or password incorrect
@@ -180,30 +218,6 @@ public class TaiKhoanController {
     }
 
 
-    @GetMapping("/checkLogin")
-    public ResponseEntity<Map<String, Object>> checkLogin(@RequestParam String token) {
-        Map<String, Object> response = new HashMap<>();
-
-        // Tìm token trong cơ sở dữ liệu
-        Optional<Token> tokenOptional = tokenRepository.findByToken(token);
-
-        if (tokenOptional.isPresent()) {
-            TaiKhoan taiKhoan = tokenOptional.get().getTaiKhoan(); // Lấy tài khoản từ token
-            response.put("status", "success");
-            response.put("message", "User is logged in");
-            response.put("data", Map.of(
-                    "maTK", taiKhoan.getMaTK(),
-                    "tenDangNhap", taiKhoan.getTenDangNhap(),
-                    "quyen", taiKhoan.getQuyen().getMaQuyen() // Giả sử quyen có phương thức getRole_id()
-            ));
-        } else {
-            // Token không tồn tại hoặc không hợp lệ
-            response.put("status", "error");
-            response.put("message", "Invalid or expired token");
-        }
-
-        return new ResponseEntity<>(response, response.get("status").equals("success") ? HttpStatus.OK : HttpStatus.BAD_REQUEST);
-    }
 
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
@@ -362,4 +376,24 @@ public class TaiKhoanController {
 
 
     }
+    @GetMapping("/getAllUser")
+    public ResponseEntity<Map<String, Object>> getAllAccounts() {
+        Map<String, Object> response = new HashMap<>();
+
+        // Retrieve all accounts from the database
+        Iterable<TaiKhoan> allTaiKhoans = taiKhoanRepository.findAll();
+
+        // Check if there are any accounts in the database
+        if (allTaiKhoans != null) {
+            response.put("status", "success");
+            response.put("message", "Accounts found");
+            response.put("data", allTaiKhoans);
+        } else {
+            response.put("status", "error");
+            response.put("message", "No accounts found");
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
 }
