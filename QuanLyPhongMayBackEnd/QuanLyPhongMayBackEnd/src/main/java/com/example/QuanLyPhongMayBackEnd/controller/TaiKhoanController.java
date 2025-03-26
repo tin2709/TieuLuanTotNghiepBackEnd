@@ -6,10 +6,8 @@ import com.example.QuanLyPhongMayBackEnd.entity.Token;
 import com.example.QuanLyPhongMayBackEnd.repository.TaiKhoanRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.TokenRepository;
 import com.example.QuanLyPhongMayBackEnd.security.JwtUtil;
-import com.example.QuanLyPhongMayBackEnd.service.MailService;
-import com.example.QuanLyPhongMayBackEnd.service.TaiKhoanService;
-import com.example.QuanLyPhongMayBackEnd.service.TokenService;
-import com.example.QuanLyPhongMayBackEnd.service.UploadImageFile;
+import com.example.QuanLyPhongMayBackEnd.service.*;
+import io.sentry.Sentry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -57,6 +55,8 @@ public class TaiKhoanController {
 
     InetAddress ip = InetAddress.getByName(InetAddress.getLocalHost().getHostAddress());
     String ipAddress = ip.toString();
+    @Autowired
+    private MayTinhService mayTinhService;
 
     public TaiKhoanController(UploadImageFile uploadImageFile) throws UnknownHostException {
         this.uploadImageFile = uploadImageFile;
@@ -338,6 +338,7 @@ public class TaiKhoanController {
             @RequestParam Long maTk,
             @RequestParam String token) {
 
+
         // Lấy maTK từ token
         Long maTK = jwtUtil.getMaTKFromToken(token);  // Lấy maTK từ token
         if (maTK == null) {
@@ -394,6 +395,59 @@ public class TaiKhoanController {
         }
 
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+    @PutMapping("/CapNhatTaiKhoan") // Use PUT for updates
+    public ResponseEntity<?> capNhatTaiKhoan(
+            @RequestParam Long maTK, // Get maTK from a Request Param.  This is less RESTful.
+            @RequestParam String tenDangNhap,
+            @RequestParam String email,
+            @RequestParam(required = false) String matKhau, // Password is optional (for changes)
+            @RequestParam(required = false) MultipartFile imageFile,
+            @RequestParam String maQuyen,
+            @RequestParam String token  // You'll likely need the token for authorization
+    ) {
+
+        if (!mayTinhService.isUserLoggedIn(token)) {
+            return new ResponseEntity<>("Invalid Token", HttpStatus.UNAUTHORIZED);
+        }
+
+
+        try {
+            // Fetch existing user
+            Optional<TaiKhoan> existingUserOptional = taiKhoanRepository.findById(String.valueOf(maTK)); // Use findById from service.  Convert maTK to String.
+            if (!existingUserOptional.isPresent()) {
+                return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
+            }
+            TaiKhoan existingUser = existingUserOptional.get();
+
+
+            // Update fields.  Only update if provided.
+            existingUser.setTenDangNhap(tenDangNhap);
+            existingUser.setEmail(email);
+
+            // Handle Password Update *Separately*
+            if (matKhau != null && !matKhau.isEmpty()) {
+                String encodedPassword = passwordEncoder.encode(matKhau);
+                existingUser.setMatKhau(encodedPassword);
+            }
+            // Map 'quyen' to 'Quyen' object
+            Quyen quyen = new Quyen(maQuyen);
+            existingUser.setQuyen(quyen);
+            // Handle Image Update (Optional)
+            if (imageFile != null && !imageFile.isEmpty()) {
+                String imageUrl = uploadImageFile.uploadImage(imageFile);  //Use your file upload service
+                existingUser.setImage(imageUrl);
+            }
+
+            TaiKhoan updatedTaiKhoan = taiKhoanService.luu(existingUser); // Reuse your existing 'luu' method.
+            return new ResponseEntity<>(updatedTaiKhoan, HttpStatus.OK);
+
+        } catch (Exception e) {
+            Sentry.captureException(e);
+            // Log the exception (using a logger like SLF4J is best practice)
+            e.printStackTrace();
+            return new ResponseEntity<>("Error updating user: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
 }
