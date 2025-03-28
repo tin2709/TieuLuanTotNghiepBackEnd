@@ -116,7 +116,7 @@ public class PhongMayService {
     }
 
 
-    private void writeLog(String username, String message) {
+    public void writeLog(String username, String message) {
         LocalDateTime now = LocalDateTime.now();
         String formattedTime = now.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
         String formattedDate = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));

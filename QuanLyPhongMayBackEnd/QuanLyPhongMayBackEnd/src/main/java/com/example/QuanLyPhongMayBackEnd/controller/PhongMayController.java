@@ -2,12 +2,11 @@ package com.example.QuanLyPhongMayBackEnd.controller;
 
 import com.example.QuanLyPhongMayBackEnd.DTO.PhongMayDTO;
 import com.example.QuanLyPhongMayBackEnd.DTO.QRDTO;
+import com.example.QuanLyPhongMayBackEnd.entity.MayTinh;
 import com.example.QuanLyPhongMayBackEnd.entity.PhongMay;
 import com.example.QuanLyPhongMayBackEnd.entity.Tang;
-import com.example.QuanLyPhongMayBackEnd.service.PhongMayService;
-import com.example.QuanLyPhongMayBackEnd.service.TaiKhoanService;
-import com.example.QuanLyPhongMayBackEnd.service.TangService;
-import com.example.QuanLyPhongMayBackEnd.service.ToaNhaService;
+import com.example.QuanLyPhongMayBackEnd.security.JwtUtil;
+import com.example.QuanLyPhongMayBackEnd.service.*;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -32,6 +31,10 @@ public class PhongMayController {
     private TaiKhoanService taiKhoanService;
     @Autowired
     private ToaNhaService toaNhaService;
+    @Autowired
+    private MayTinhService mayTinhService;
+    @Autowired
+    private JwtUtil jwtUtil;
 
     @PostMapping("/LuuPhongMay")
     public PhongMay luu(
@@ -179,6 +182,49 @@ public class PhongMayController {
         List<QRDTO> danhSachPhongMay = phongMayService.layDanhSachPhongMayVaThongKe(token);
         return new ResponseEntity<>(danhSachPhongMay, HttpStatus.OK);
     }
+    @GetMapping("/DSMayTinhTheoPhong")
+    public ResponseEntity<List<MayTinh>> layDSMayTinhTheoPhong(
+            @RequestParam Long maPhong,
+            @RequestParam String token) {
+
+        // Lấy tên người dùng từ token
+        String username = null;
+        try {
+            username = jwtUtil.getUsernameFromToken(token);
+        } catch (Exception e) {
+            // Nếu có lỗi khi lấy tên người dùng từ token, ghi log và trả về lỗi
+            phongMayService.writeLog(null, "layDSMayTinhTheoPhong - Error getting username from token: " + e.getMessage());
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+
+        // Kiểm tra tính hợp lệ của token
+        if (!phongMayService.isUserLoggedIn(token)) {
+            phongMayService.writeLog(username, "layDSMayTinhTheoPhong - User not logged in. Access denied for maPhong: " + maPhong);
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED); // Trả về lỗi UNAUTHORIZED nếu token không hợp lệ
+        }
+
+        try {
+            // Gọi service để lấy danh sách máy tính theo phòng
+            List<MayTinh> mayTinhList = mayTinhService.layDSMayTinhTheoMaPhong(maPhong, token);
+
+            // Ghi log kết quả
+            phongMayService.writeLog(username, "layDSMayTinhTheoPhong - Success. maPhong: " + maPhong + ", Found " + (mayTinhList != null ? mayTinhList.size() : "null") + " computers.");
+
+            // Nếu danh sách máy tính không rỗng, trả về danh sách
+            if (mayTinhList != null && !mayTinhList.isEmpty()) {
+                return new ResponseEntity<>(mayTinhList, HttpStatus.OK);
+            } else {
+                // Nếu không có máy tính, trả về thông báo no content
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+            }
+        } catch (Exception e) {
+            // Ghi log lỗi và trả về lỗi server error nếu có ngoại lệ
+            phongMayService.writeLog(username, "layDSMayTinhTheoPhong - Error fetching computers: " + e.getMessage() + ". maPhong: " + maPhong);
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
 
 
 
