@@ -7,6 +7,7 @@ import com.example.QuanLyPhongMayBackEnd.repository.ToaNhaRepository;
 import com.opencsv.exceptions.CsvValidationException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import com.opencsv.CSVReader;
@@ -51,7 +52,7 @@ public class ToaNhaService {
             return toaNha;
         }
     }
-
+    @Cacheable(value = "toanhas") // Lưu trữ kết quả trong cache với tên "phongMays"
     public List<ToaNha> layDSToaNha(String token) {
         if (!isUserLoggedIn(token)) {
             return null; // Token không hợp lệ

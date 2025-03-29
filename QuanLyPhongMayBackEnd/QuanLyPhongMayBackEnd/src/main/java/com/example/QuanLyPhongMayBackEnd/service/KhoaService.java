@@ -5,6 +5,7 @@ import com.example.QuanLyPhongMayBackEnd.entity.Khoa;
 import com.example.QuanLyPhongMayBackEnd.repository.KhoaRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -33,7 +34,7 @@ public class KhoaService {
             return khoa;
         }
     }
-
+    @Cacheable(value = "khoas") // Lưu trữ kết quả trong cache với tên "phongMays"
     public List<Khoa> layDSKhoa(String token) {
         if (!isUserLoggedIn(token)) {
             return null; // Token không hợp lệ

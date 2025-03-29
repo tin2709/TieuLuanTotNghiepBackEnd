@@ -8,6 +8,7 @@ import com.example.QuanLyPhongMayBackEnd.repository.TangRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.ToaNhaRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import com.opencsv.CSVReader;
 import org.springframework.web.multipart.MultipartFile;
@@ -63,7 +64,7 @@ public class TangService {
     }
 
 
-
+    @Cacheable(value = "tangs") // Lưu trữ kết quả trong cache với tên "phongMays"
     public List<Tang> layDSTang(String token) {
         if (!isUserLoggedIn(token)) {
             return null; // Token không hợp lệ

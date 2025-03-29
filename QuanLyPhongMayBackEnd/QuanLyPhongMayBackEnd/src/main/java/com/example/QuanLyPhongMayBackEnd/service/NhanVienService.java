@@ -7,6 +7,7 @@ import com.example.QuanLyPhongMayBackEnd.repository.NhanVienRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -44,7 +45,7 @@ public class NhanVienService {
             return nhanVien;
         }
     }
-
+    @Cacheable(value = "nhanviens") // Lưu trữ kết quả trong cache với tên "phongMays"
     public List<NhanVien> layDSNV(String token) {
         if (!isUserLoggedIn(token)) {
             return null; // Token không hợp lệ
