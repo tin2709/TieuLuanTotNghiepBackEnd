@@ -14,6 +14,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -264,27 +265,40 @@ public class PhongMayService {
             throw e;
         }
     }
+    @Cacheable(value = "phongMays") // Lưu trữ kết quả trong cache với tên "phongMays"
     public List<PhongMay> layDSPhongMay(String token) {
         String username = null;
+        long startTime = System.currentTimeMillis();  // Bắt đầu đo thời gian
+
         try {
             username = jwtUtil.getUsernameFromToken(token);
         } catch (Exception e) {
-            writeLog(null, "layDSPhongMay - Error getting username from token: " + e.getMessage());
+            System.out.println("layDSPhongMay - Error getting username from token: " + e.getMessage());
         }
 
         if (!isUserLoggedIn(token)) {
-            writeLog(username, "layDSPhongMay - User not logged in.");
+            System.out.println("layDSPhongMay - User not logged in.");
             return null;
         }
+
         try {
             List<PhongMay> result = phongMayRepository.findAll();
-            writeLog(username, "layDSPhongMay - Success. Result size: " + result.size());
+            long endTime = System.currentTimeMillis();  // Đo thời gian kết thúc
+
+            System.out.println("layDSPhongMay - Success. Result size: " + result.size());
+            System.out.println("layDSPhongMay - Time taken: " + (endTime - startTime) + " ms"); // In ra thời gian đã sử dụng
+
             return result;
-        } catch(Exception ex){
-            writeLog(username, "layDSPhongMay - Error: " + ex.getMessage());
+        } catch (Exception ex) {
+            long endTime = System.currentTimeMillis();  // Đo thời gian kết thúc khi có lỗi
+
+            System.out.println("layDSPhongMay - Error: " + ex.getMessage());
+            System.out.println("layDSPhongMay - Time taken: " + (endTime - startTime) + " ms"); // In ra thời gian đã sử dụng dù có lỗi
+
             throw ex;
         }
     }
+
 
 
     @Transactional

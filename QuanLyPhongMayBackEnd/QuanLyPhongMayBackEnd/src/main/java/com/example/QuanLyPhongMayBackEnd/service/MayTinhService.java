@@ -7,6 +7,7 @@ import com.example.QuanLyPhongMayBackEnd.repository.MayTinhRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.PhongMayRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -51,6 +52,7 @@ public class MayTinhService {
     }
 
     // Phương thức lấy danh sách tất cả máy tính
+    @Cacheable(value = "maytinhs") // Lưu trữ kết quả trong cache với tên "phongMays"
     public List<MayTinh> layDSMayTinh(String token) {
         if (!isUserLoggedIn(token)) {
             return null; // Token không hợp lệ

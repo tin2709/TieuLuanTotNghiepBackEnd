@@ -4,6 +4,7 @@ import com.example.QuanLyPhongMayBackEnd.entity.Tang;
 import com.example.QuanLyPhongMayBackEnd.repository.LichTrucRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -32,7 +33,7 @@ public class LichTrucService {
             return lichTruc;
         }
     }
-
+    @Cacheable(value = "lichtrucs") // Lưu trữ kết quả trong cache với tên "phongMays"
     public List<LichTruc> layDSLT(String token ) {
         if (!isUserLoggedIn(token)) {
             return null; // Token không hợp lệ
