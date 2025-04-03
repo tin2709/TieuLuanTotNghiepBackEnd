@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_USER: root # Cho healthcheck
+    ports:
+      - "3307:3306" # Host port 3307 -> Container port 3306
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u$$MYSQL_USER", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Service cho ứng dụng Spring Boot Backend (phục vụ HTTPS trên cổng 8080 bên trong)
+  spring-app:
+    image: tieuluantotnghiepbackend-spring-app:latest
+    container_name: springboot-app
+    environment:
+      # Kết nối tới MySQL trong container khác qua SSL/TLS
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/Phongmay?useSSL=true&verifyServerCertificate=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=123456
+      # Các cấu hình server.ssl.* đã có trong application.properties bên trong image
+    ports:
+      # ----> ÁNH XẠ CỔNG HOST 8080 TỚI CONTAINER 8080 <----
+      # Bạn sẽ truy cập qua https://localhost:8080
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy # Đợi MySQL sẵn sàng
+    networks:
+      - backend-network
+
+    volumes:
+       - ./keystoreqlpmnew.p12:/app/keystoreqlpmnew.p12
+
+# Định nghĩa network chung
+networks:
+  backend-network:
+    driver: bridge
+
+# Định nghĩa named volume cho dữ liệu MySQL
+volumes:
+  mysql_data: {}
