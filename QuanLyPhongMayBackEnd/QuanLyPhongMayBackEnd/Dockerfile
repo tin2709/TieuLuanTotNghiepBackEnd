@@ -1,7 +1,19 @@
-FROM openjdk:17
-ARG JAR_FILE=target/*.jar
+# --- Stage 1: Build ---
+FROM openjdk:17-jdk-slim AS builder
+WORKDIR /app
+COPY mvnw .
+COPY .mvn .mvn
+COPY pom.xml .
+RUN ./mvnw dependency:go-offline -B
+COPY src ./src
+RUN ./mvnw package -DskipTests
 
-ADD ${JAR_FILE} api-service.jar
+# --- Stage 2: Runtime ---
+# SỬA DÒNG NÀY: Dùng tag 'openjdk:17-slim' thay thế
+FROM openjdk:17-slim
 
-ENTRYPOINT ["java","-jar","api-service.jar"]
+WORKDIR /app
+COPY --from=builder /app/target/*.jar app.jar
 EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]
+# Hoặc: ENTRYPOINT ["java", "-Dspring.profiles.active=docker", "-jar", "app.jar"]
