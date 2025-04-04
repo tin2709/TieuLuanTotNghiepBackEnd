@@ -19,9 +19,8 @@ public class MayTinh {
     @Column(name = "ten_may", columnDefinition = "nvarchar(100)")
     private String tenMay;
 
-    @Column(name = "trang_thai", columnDefinition = "nvarchar(50) DEFAULT N'Đang hoạt động' CHECK (trang_thai IN (N'Đã hỏng', N'Đang hoạt động'))")
-    private String trangThai = "Đang hoạt động";
-
+    @Column(name = "trang_thai", columnDefinition = "nvarchar(50) DEFAULT N'Đang hoạt động' CHECK (trang_thai IN (N'Đã hỏng', N'Đang hoạt động', N'Không hoạt động'))")
+    private String trangThai = "Đang hoạt động"; // Default remains 'Đang hoạt động'
     @Column(name = "mo_ta", columnDefinition = "TEXT")
     private String moTa;
 

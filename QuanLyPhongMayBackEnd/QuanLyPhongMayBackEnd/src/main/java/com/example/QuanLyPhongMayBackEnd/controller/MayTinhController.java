@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 // import org.springframework.format.annotation.DateTimeFormat; // No longer needed
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.*;
 
 // import java.util.Date; // No longer needed for params
@@ -46,7 +47,7 @@ public class MayTinhController {
             mayTinh.setPhongMay(phongMayRef);
 
             MayTinh savedMayTinh = mayTinhService.luu(mayTinh, token); // Triggers @PrePersist
-            if (savedMayTinh == null && !mayTinhService.isUserLoggedIn(token)){
+            if (savedMayTinh == null && !mayTinhService.isUserLoggedIn(token)) {
                 return new ResponseEntity<>("Unauthorized or Invalid Token", HttpStatus.UNAUTHORIZED);
             }
             // savedMayTinh will have ngayLapDat set, ngayCapNhat will be null
@@ -56,8 +57,7 @@ public class MayTinhController {
             Map<String, String> errorResponse = new HashMap<>();
             errorResponse.put("message", e.getMessage());
             return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             Sentry.captureException(e);
             Map<String, String> errorResponse = new HashMap<>();
             errorResponse.put("message", "Có lỗi xảy ra khi lưu máy tính: " + e.getMessage());
@@ -86,7 +86,7 @@ public class MayTinhController {
             }
 
             MayTinh mayTinh = mayTinhService.layMayTinhTheoMa(maMay, token);
-            if(mayTinh == null){
+            if (mayTinh == null) {
                 Map<String, String> errorResponse = new HashMap<>();
                 errorResponse.put("message", "Không tìm thấy máy tính với mã máy: " + maMay + " hoặc token không hợp lệ.");
                 return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
@@ -99,7 +99,7 @@ public class MayTinhController {
             // ngayCapNhat will be set by @PreUpdate before the actual DB update
 
             MayTinh updatedMayTinh = mayTinhService.capNhatMayTinh(mayTinh, token); // Triggers @PreUpdate
-            if (updatedMayTinh == null){
+            if (updatedMayTinh == null) {
                 Map<String, String> errorResponse = new HashMap<>();
                 errorResponse.put("message", "Cập nhật máy tính thất bại hoặc token không hợp lệ.");
                 return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -112,8 +112,7 @@ public class MayTinhController {
             Map<String, String> errorResponse = new HashMap<>();
             errorResponse.put("message", e.getMessage());
             return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             Sentry.captureException(e);
             Map<String, String> errorResponse = new HashMap<>();
             errorResponse.put("message", "Có lỗi xảy ra khi cập nhật máy tính: " + e.getMessage());
@@ -175,5 +174,37 @@ public class MayTinhController {
             return new ResponseEntity<>(mayTinh, HttpStatus.OK);
         }
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+    @PutMapping("/CapNhatTrangThaiNhieuMay")
+    public ResponseEntity<Object> capNhatTrangThaiNhieuMay(
+            @RequestParam List<Long> maMayTinhList, // Spring tự động chuyển đổi từ "1,2,3" hoặc ?maMayTinhList=1&maMayTinhList=2...
+            @RequestParam List<String> trangThaiList, // Tương tự cho trạng thái "status1,status2,status3"
+            @RequestParam String token) {
+
+        Map<String, Object> response = new HashMap<>();
+        try {
+            List<MayTinh> updatedComputers = mayTinhService.capNhatTrangThaiNhieuMay(maMayTinhList, trangThaiList, token);
+            response.put("message", "Cập nhật trạng thái thành công cho " + updatedComputers.size() + " máy tính.");
+            response.put("updatedComputers", updatedComputers); // Tùy chọn: trả về danh sách đã cập nhật
+            return new ResponseEntity<>(response, HttpStatus.OK);
+
+        } catch (AccessDeniedException e) {
+            Sentry.captureException(e); // Ghi log lỗi bảo mật
+            response.put("message", e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED); // 401 Unauthorized
+        } catch (IllegalArgumentException e) {
+            // Lỗi do input không hợp lệ (vd: list khác size)
+            response.put("message", e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST); // 400 Bad Request
+        } catch (EntityNotFoundException e) {
+            // Lỗi do không tìm thấy một máy tính nào đó
+            response.put("message", e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND); // 404 Not Found
+        } catch (Exception e) {
+            // Các lỗi khác không mong muốn
+            Sentry.captureException(e);
+            response.put("message", "Có lỗi xảy ra trong quá trình cập nhật trạng thái: " + e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+        }
     }
 }
