@@ -1,12 +1,15 @@
 version: '3.8'
 
 services:
+  # --- MySQL Service (Không thay đổi) ---
   mysql:
     image: mysql:8
     container_name: mysql
     environment:
       MYSQL_ROOT_PASSWORD: 123456
       MYSQL_USER: root # Cho healthcheck
+    build:
+      dockerfile: QuanLyPhongMayBackEnd/QuanLyPhongMayBackEnd/Dockerfile
     ports:
       - "3307:3306" # Host port 3307 -> Container port 3306
     volumes:
@@ -20,34 +23,53 @@ services:
       retries: 5
       start_period: 30s
 
-  # Service cho ứng dụng Spring Boot Backend (phục vụ HTTPS trên cổng 8080 bên trong)
+  # --- Spring Boot App Service (Chạy từ Source Code) ---
   spring-app:
-    image: tieuluantotnghiepbackend-spring-app:latest
+    image: eclipse-temurin:17-jdk-alpine # Hoặc :21 nếu bạn cần Java 21
     container_name: springboot-app
+    # Thư mục làm việc phải là thư mục gốc của dự án trong container
+    # Nơi chứa file mvnw
+    working_dir: /app
     environment:
-      # Kết nối tới MySQL trong container khác qua SSL/TLS
+      # Kết nối tới MySQL trong container khác qua SSL/TLS (Giữ nguyên)
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/Phongmay?useSSL=true&verifyServerCertificate=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=123456
-      # Các cấu hình server.ssl.* đã có trong application.properties bên trong image
+      # Các cấu hình server.ssl.* nên nằm trong application.properties/yml của code nguồn
+    volumes:
+      # 1. Mount thư mục gốc của dự án Spring Boot trên máy host
+      #    vào thư mục /app trong container.
+      #    Đường dẫn tương đối './QuanLyPhongMayBackEnd/QuanLyPhongMayBackEnd'
+      #    giả định file docker-compose.yml nằm ở F:\TieuLuanTotNghiepBackEnd\
+      #    ----> XÁC NHẬN LẠI ĐƯỜNG DẪN NÀY! <----
+      - ./QuanLyPhongMayBackEnd/QuanLyPhongMayBackEnd:/app
+
+      # 2. Mount thư mục cache Maven (tùy chọn nhưng nên có)
+      - ~/.m2:/root/.m2
+
+      # 3. Mount file keystore vào /app/keystore trong container
+      #    Đảm bảo application.properties/yml trỏ đúng tới
+      #    /app/keystore/keystoreqlpmnew.p12 bên trong container
+      - ./keystoreqlpmnew.p12:/app/keystore/keystoreqlpmnew.p12
     ports:
-      # ----> ÁNH XẠ CỔNG HOST 8080 TỚI CONTAINER 8080 <----
-      # Bạn sẽ truy cập qua https://localhost:8080
+      # Ánh xạ cổng host 8080 tới container 8080 (cho HTTPS)
       - "8080:8080"
+    # Lệnh để chạy ứng dụng Spring Boot từ source bằng Maven Wrapper
+    # Lệnh này sẽ chạy từ thư mục working_dir (/app)
+    command: [ "./mvnw", "spring-boot:run" ]
     depends_on:
       mysql:
         condition: service_healthy # Đợi MySQL sẵn sàng
     networks:
       - backend-network
 
-    volumes:
-       - ./keystoreqlpmnew.p12:/app/keystoreqlpmnew.p12
-
-# Định nghĩa network chung
+# --- Networks (Không thay đổi) ---
 networks:
   backend-network:
     driver: bridge
 
-# Định nghĩa named volume cho dữ liệu MySQL
+# --- Volumes (Không thay đổi) ---
+# Chỉ cần định nghĩa named volume cho mysql một lần
 volumes:
   mysql_data: {}
+# --- XÓA PHẦN volumes BỊ LẶP Ở ĐÂY ---

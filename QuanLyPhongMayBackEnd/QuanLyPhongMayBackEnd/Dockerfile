@@ -5,7 +5,7 @@ COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
 RUN ./mvnw dependency:go-offline -B
-COPY src ./src
+COPY src ./src/main/resources/keystoreqlpmnew.p12
 RUN ./mvnw package -DskipTests
 
 # --- Stage 2: Runtime ---

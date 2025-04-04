@@ -12,8 +12,10 @@ import org.springframework.cache.annotation.CacheEvict; // For cache invalidatio
 import org.springframework.cache.annotation.CachePut;  // For cache update
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;    // For combining cache operations
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date; // Import Date
 import java.util.List;
 import java.util.Optional;
@@ -147,5 +149,52 @@ public class MayTinhService {
 
         // 4. Save the updated entity. @UpdateTimestamp will automatically update ngayChinhSua.
         return mayTinhRepository.save(existingMayTinh);
+    }
+    @Transactional // Đảm bảo tất cả các cập nhật thành công hoặc tất cả thất bại
+    @Caching(evict = {
+            @CacheEvict(value = "maytinhs", allEntries = true), // Xóa cache danh sách tất cả máy tính
+            // Cân nhắc: Xóa cache từng máy cụ thể nếu cần hiệu năng cao hơn,
+            // nhưng xóa toàn bộ cache 'maytinh' đơn giản hơn khi cập nhật nhiều.
+            @CacheEvict(value = "maytinh", allEntries = true)
+    })
+    public List<MayTinh> capNhatTrangThaiNhieuMay(List<Long> maMayTinhList, List<String> trangThaiList, String token) {
+        if (!isUserLoggedIn(token)) {
+            // Ném ra lỗi rõ ràng hơn thay vì chỉ trả về null/empty list
+            throw new AccessDeniedException("Unauthorized: Invalid or expired token.");
+        }
+
+        if (maMayTinhList == null || trangThaiList == null || maMayTinhList.size() != trangThaiList.size()) {
+            throw new IllegalArgumentException("Danh sách mã máy và danh sách trạng thái phải cùng kích thước và không được null.");
+        }
+
+        if (maMayTinhList.isEmpty()) {
+            return new ArrayList<>(); // Không có gì để cập nhật, trả về danh sách rỗng
+        }
+
+        List<MayTinh> updatedMayTinhList = new ArrayList<>();
+
+        for (int i = 0; i < maMayTinhList.size(); i++) {
+            Long maMay = maMayTinhList.get(i);
+            String newTrangThai = trangThaiList.get(i);
+
+            // Validate newTrangThai if needed (e.g., check against allowed statuses)
+            // if (!isValidStatus(newTrangThai)) {
+            //     throw new IllegalArgumentException("Trạng thái không hợp lệ: " + newTrangThai + " cho máy " + maMay);
+            // }
+
+            // Tìm máy tính theo mã
+            MayTinh mayTinh = mayTinhRepository.findById(maMay)
+                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy máy tính với mã: " + maMay));
+
+            // Cập nhật trạng thái
+            mayTinh.setTrangThai(newTrangThai);
+            // @UpdateTimestamp sẽ tự động cập nhật ngayChinhSua
+
+            // Lưu lại (trong ngữ cảnh @Transactional, việc lưu sẽ được quản lý)
+            MayTinh savedMayTinh = mayTinhRepository.save(mayTinh);
+            updatedMayTinhList.add(savedMayTinh);
+        }
+
+        return updatedMayTinhList; // Trả về danh sách các máy đã được cập nhật
     }
 }
