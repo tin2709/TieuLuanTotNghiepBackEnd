@@ -1,5 +1,6 @@
 package com.example.QuanLyPhongMayBackEnd.controller;
 
+import com.example.QuanLyPhongMayBackEnd.entity.PhongMay;
 import com.example.QuanLyPhongMayBackEnd.entity.ThietBi;
 import com.example.QuanLyPhongMayBackEnd.service.ThietBiService;
 import io.sentry.Sentry;
@@ -32,13 +33,17 @@ public class ThietBiController {
             @RequestParam String tenThietBi,
             @RequestParam String trangThai,
             @RequestParam String moTa,
+            @RequestParam Long maPhong,
             @RequestParam Long maLoai, // Foreign key
             @RequestParam String token) {
         try {
+            PhongMay phongMayRef = new PhongMay();
+            phongMayRef.setMaPhong(maPhong);
             ThietBi newThietBi = new ThietBi();
             newThietBi.setTenThietBi(tenThietBi);
             newThietBi.setTrangThai(trangThai);
             newThietBi.setMoTa(moTa);
+            newThietBi.setPhongMay(phongMayRef);
             // Service handles finding LoaiThietBi by maLoai and associating
             ThietBi savedThietBi = thietBiService.luuThietBi(newThietBi, maLoai, token);
             return new ResponseEntity<>(savedThietBi, HttpStatus.CREATED);
@@ -162,4 +167,64 @@ public class ThietBiController {
             return new ResponseEntity<>(createErrorResponse("Lỗi khi lấy danh sách thiết bị theo trạng thái: " + e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+    @GetMapping("/DSThietBiTheoPhong")
+    public ResponseEntity<?> getThietBiByPhongMay(
+            @RequestParam Long maPhong,
+            @RequestParam(name = "maLoai", required = false) Long maLoai, // Parameter name and type changed
+            @RequestParam String token) {
+        try {
+            // Call the updated service method, passing maLoai
+            // The service method now returns List<ThietBi>
+            List<ThietBi> dsThietBi = thietBiService.layDSThietBiTheoPhong(maPhong, maLoai, token);
+
+            // Return 200 OK with the list (which might be empty)
+            return new ResponseEntity<>(dsThietBi, HttpStatus.OK); // Variable name dsThietBiDTO changed to dsThietBi for clarity
+
+        } catch (SecurityException e) {
+            return new ResponseEntity<>(createErrorResponse(e.getMessage()), HttpStatus.UNAUTHORIZED);
+        } catch (EntityNotFoundException e) { // Catch if the service validates room and it's not found
+            return new ResponseEntity<>(createErrorResponse(e.getMessage()), HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            Sentry.captureException(e);
+            // Updated error message construction
+            String filterInfo = (maLoai != null) ? " và mã loại " + maLoai : "";
+            return new ResponseEntity<>(createErrorResponse("Lỗi khi lấy danh sách thiết bị theo phòng" + filterInfo + ": " + e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    @PutMapping("/CapNhatTrangThaiNhieuThietBi")
+    public ResponseEntity<Object> capNhatTrangThaiNhieuThietBi(
+            @RequestParam List<Long> maThietBiList, // List of device IDs
+            @RequestParam List<String> trangThaiList, // List of corresponding statuses
+            @RequestParam String token) {
+
+        Map<String, Object> response = new HashMap<>();
+        try {
+            // Call the corresponding service method (needs to be created in ThietBiService)
+            List<ThietBi> updatedDevices = thietBiService.capNhatTrangThaiNhieuThietBi(maThietBiList, trangThaiList, token);
+
+            // Success response
+            response.put("message", "Cập nhật trạng thái thành công cho " + updatedDevices.size() + " thiết bị.");
+            response.put("updatedDevices", updatedDevices); // Optionally return the updated list
+            return new ResponseEntity<>(response, HttpStatus.OK);
+
+        } catch (SecurityException e) { // Using SecurityException consistent with ThietBiService
+            // Sentry.captureException(e); // Keep Sentry logging
+            response.put("message", e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED); // 401 Unauthorized
+        } catch (IllegalArgumentException e) {
+            // Error due to invalid input (e.g., lists have different sizes)
+            response.put("message", e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST); // 400 Bad Request
+        } catch (EntityNotFoundException e) {
+            // Error because some device ID was not found
+            response.put("message", e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND); // 404 Not Found
+        } catch (Exception e) {
+            // Other unexpected errors
+            Sentry.captureException(e);
+            response.put("message", "Có lỗi xảy ra trong quá trình cập nhật trạng thái thiết bị: " + e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+        }
+    }
+
 }

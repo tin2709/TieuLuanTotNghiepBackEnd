@@ -18,8 +18,8 @@ public class ThietBi {
     @Column(name = "ten_thiet_bi", columnDefinition = "nvarchar(100)") // Changed name
     private String tenThietBi;
 
-    @Column(name = "trang_thai", columnDefinition = "nvarchar(50) DEFAULT N'Đang hoạt động' CHECK (trang_thai IN (N'Đã hỏng', N'Đang hoạt động'))")
-    private String trangThai = "Đang hoạt động"; // Same as MayTinh
+    @Column(name = "trang_thai", columnDefinition = "nvarchar(50) DEFAULT N'Đang hoạt động' CHECK (trang_thai IN (N'Đã hỏng', N'Đang hoạt động', N'Không hoạt động'))")
+    private String trangThai = "Đang hoạt động"; // Default remains 'Đang hoạt động'
 
     @Column(name = "mo_ta", columnDefinition = "TEXT") // Same as MayTinh
     private String moTa;
@@ -32,6 +32,10 @@ public class ThietBi {
     @Column(name = "ngay_cap_nhat") // Same as MayTinh
     private Date ngayCapNhat;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JsonBackReference
+    @JoinColumn(name = "ma_phong")
+    private PhongMay phongMay;
     // Relationship to LoaiThietBi (Many Devices belong to One Type)
     @ManyToOne(fetch = FetchType.LAZY) // Consider Lazy fetching
     @JoinColumn(name = "ma_loai", nullable = false) // Foreign key column, added not null constraint
@@ -99,9 +103,17 @@ public class ThietBi {
     public void setLoaiThietBi(LoaiThietBi loaiThietBi) {
         this.loaiThietBi = loaiThietBi;
     }
+    public PhongMay getPhongMay() {
+        return phongMay;
+    }
+    public void setPhongMay(PhongMay phongMay) {
+        this.phongMay = phongMay;
+    }
+
+
 
     // --- Constructors ---
-    public ThietBi(Long maThietBi, String tenThietBi, String trangThai, String moTa, Date ngayLapDat, Date ngayCapNhat, LoaiThietBi loaiThietBi) {
+    public ThietBi(Long maThietBi, String tenThietBi, String trangThai, String moTa, Date ngayLapDat, Date ngayCapNhat, LoaiThietBi loaiThietBi,PhongMay phongMay) {
         super();
         this.maThietBi = maThietBi;
         this.tenThietBi = tenThietBi;
@@ -110,6 +122,7 @@ public class ThietBi {
         this.ngayLapDat = ngayLapDat;
         this.ngayCapNhat = ngayCapNhat;
         this.loaiThietBi = loaiThietBi;
+        this.phongMay = phongMay;
     }
 
     public ThietBi() {
