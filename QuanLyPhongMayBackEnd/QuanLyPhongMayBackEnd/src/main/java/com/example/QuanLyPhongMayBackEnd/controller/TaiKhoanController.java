@@ -1,6 +1,8 @@
 package com.example.QuanLyPhongMayBackEnd.controller;
 
+import com.example.QuanLyPhongMayBackEnd.DTO.LoginResponseDTO;
 import com.example.QuanLyPhongMayBackEnd.entity.Quyen;
+import com.example.QuanLyPhongMayBackEnd.entity.RefreshToken;
 import com.example.QuanLyPhongMayBackEnd.entity.TaiKhoan;
 import com.example.QuanLyPhongMayBackEnd.entity.Token;
 import com.example.QuanLyPhongMayBackEnd.repository.TaiKhoanRepository;
@@ -8,6 +10,7 @@ import com.example.QuanLyPhongMayBackEnd.repository.TokenRepository;
 import com.example.QuanLyPhongMayBackEnd.security.JwtUtil;
 import com.example.QuanLyPhongMayBackEnd.service.*;
 import io.sentry.Sentry;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -52,7 +55,8 @@ public class TaiKhoanController {
     private MailService mailService;
     @Autowired
     private final UploadImageFile uploadImageFile;
-
+    @Autowired
+    private RefreshTokenService refreshTokenService;
     InetAddress ip = InetAddress.getByName(InetAddress.getLocalHost().getHostAddress());
     String ipAddress = ip.toString();
     @Autowired
@@ -113,29 +117,65 @@ public class TaiKhoanController {
 
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, String>> login(@RequestParam String username, @RequestParam String password) {
+    public ResponseEntity<?> login(@RequestParam String username, @RequestParam String password) {
+
         Optional<TaiKhoan> taiKhoanOptional = taiKhoanService.timTaiKhoanByUsername(username);
 
         if (taiKhoanOptional.isPresent()) {
             TaiKhoan taiKhoan = taiKhoanOptional.get();
 
-            // Kiểm tra mật khẩu
+            // 1. Kiểm tra tài khoản bị khóa
+            if (taiKhoan.isBanned()) {
+                System.out.println("Login thất bại cho user: " + username + ". Tài khoản bị khóa.");
+                // Trả về chỉ HttpStatus.FORBIDDEN
+                return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+            }
+
+            // 2. Kiểm tra mật khẩu
             if (passwordEncoder.matches(password, taiKhoan.getMatKhau())) {
-                // Tạo token
-                String token = jwtUtil.generateToken(username);
+                try {
+                    // 3. Tạo Access Token
+                    String accessToken = jwtUtil.generateToken(username);
 
-                // Lưu token vào cơ sở dữ liệu
-                Token newToken = tokenService.saveToken(token, taiKhoan);
+                    // 4. Lưu Access Token vào DB (Logic cũ)
+                    tokenService.saveToken(accessToken, taiKhoan);
 
-                // Trả về token
-                Map<String, String> response = new HashMap<>();
-                response.put("token", newToken.getToken());
-                return new ResponseEntity<>(response, HttpStatus.OK);
+                    // 5. Tạo Refresh Token (Lưu vào DB)
+                    RefreshToken refreshToken = refreshTokenService.createRefreshToken(String.valueOf(taiKhoan.getMaTK()));
+
+                    // 6. Chuẩn bị Response thành công
+                    LoginResponseDTO loginResponse = new LoginResponseDTO(
+                            accessToken,
+                            refreshToken.getToken(),
+                            taiKhoan.getMaTK(),
+                            taiKhoan.getTenDangNhap(),
+                            taiKhoan.getEmail(),
+                            taiKhoan.getQuyen() != null ? taiKhoan.getQuyen().getMaQuyen() : null,
+                            taiKhoan.getImage()
+                    );
+
+                    // 7. Trả về thành công với LoginResponse và OK status
+                    return new ResponseEntity<>(loginResponse, HttpStatus.OK); // Hoặc ResponseEntity.ok(loginResponse);
+
+                } catch (Exception e) {
+                    System.err.println("Lỗi khi tạo/lưu token cho user " + username + ": " + e.getMessage());
+                    e.printStackTrace();
+                    // Trả về chỉ HttpStatus.INTERNAL_SERVER_ERROR
+                    return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+                }
             } else {
+                // Sai mật khẩu
+                System.out.println("Login thất bại cho user: " + username + ". Sai mật khẩu.");
+                // Trả về chỉ HttpStatus.UNAUTHORIZED
                 return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
             }
         } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            // Không tìm thấy user
+            System.out.println("Login thất bại. Không tìm thấy user: " + username);
+            // Trả về chỉ HttpStatus.UNAUTHORIZED (như trường hợp sai pass)
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+            // Hoặc trả về NOT_FOUND nếu bạn muốn giữ nguyên như code gốc ban đầu
+            // return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
     @GetMapping("/checkUser")
@@ -447,6 +487,88 @@ public class TaiKhoanController {
             // Log the exception (using a logger like SLF4J is best practice)
             e.printStackTrace();
             return new ResponseEntity<>("Error updating user: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    @PostMapping("/refreshtoken")
+    public ResponseEntity<?> refreshtoken(@RequestParam String refreshTokenValue,
+                                          @RequestParam String maTK) {
+
+        // 1. Tìm refresh token cũ
+        Optional<RefreshToken> optionalOldToken = refreshTokenService.findByToken(refreshTokenValue);
+
+        // 2. Kiểm tra tồn tại
+        if (optionalOldToken.isEmpty()) {
+            System.err.println("Lỗi làm mới token: Refresh token không tồn tại.");
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+
+        RefreshToken oldToken = optionalOldToken.get();
+        TaiKhoan taiKhoan = oldToken.getTaiKhoan(); // Lấy tài khoản từ Refresh Token
+
+        // 3. Kiểm tra tài khoản từ token
+        if (taiKhoan == null) {
+            System.err.println("Lỗi làm mới token: Không thể xác định tài khoản từ refresh token.");
+            refreshTokenService.deleteRefreshToken(oldToken); // Xóa token lỗi
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+
+        // 4. *** KIỂM TRA KHÔNG AN TOÀN: Kiểm tra maTK gửi lên ***
+        try {
+            Long requestMaTkLong = Long.parseLong(maTK);
+            if (!taiKhoan.getMaTK().equals(requestMaTkLong)) {
+                System.err.println("Lỗi làm mới token: maTK trong request ("+maTK+") không khớp với token.");
+                return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+            }
+        } catch (NumberFormatException e) {
+            System.err.println("Lỗi làm mới token: maTK trong request không phải là số hợp lệ: " + maTK);
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+
+        // 5. Kiểm tra hạn sử dụng của refresh token CŨ
+        Optional<RefreshToken> verifiedTokenOpt = refreshTokenService.verifyExpiration(oldToken);
+        if (verifiedTokenOpt.isEmpty()) {
+            System.err.println("Lỗi làm mới token: Refresh token đã hết hạn.");
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+
+        // --- Thực hiện Logic Xóa + Tạo Mới ---
+        try {
+            // 6. Xóa TẤT CẢ Refresh Token của người dùng này (Logic giống logout)
+            int deletedRefreshCount = refreshTokenService.deleteAllTokensByUserId(String.valueOf(taiKhoan.getMaTK()));
+            System.out.println("Đã xóa " + deletedRefreshCount + " Refresh Token cũ của tài khoản: " + taiKhoan.getTenDangNhap());
+
+            // 7. Xóa TẤT CẢ Access Token cũ của người dùng này (Logic giống logout)
+            int deletedAccessCount = taiKhoanService.deleteAccessTokenByUser(taiKhoan);
+            System.out.println("Đã xóa " + deletedAccessCount + " Access Token cũ của tài khoản: " + taiKhoan.getTenDangNhap());
+
+            // --- Tạo Token Mới ---
+
+            // 8. Tạo refresh token MỚI
+            RefreshToken newRefreshToken = refreshTokenService.createRefreshToken(String.valueOf(taiKhoan.getMaTK()));
+
+            // 9. Tạo access token MỚI (JWT String)
+            String newAccessToken = jwtUtil.generateToken(taiKhoan.getTenDangNhap());
+
+            // 10. **QUAN TRỌNG:** Lưu access token MỚI vào bảng `token`.
+            //     Phương thức `saveAccessToken` trong `TaiKhoanService` đã được thiết kế
+            //     để tính toán `expiresAt` dựa trên hạn của Access Token (thông qua jwtUtil.getExpiration()).
+            //     Nó sẽ lưu hạn của `newAccessToken` chứ KHÔNG phải hạn của `refreshTokenValue`.
+            taiKhoanService.saveAccessToken(newAccessToken, taiKhoan);
+            System.out.println("Đã lưu Access Token mới vào DB với hạn của chính nó.");
+
+
+            // 11. Chuẩn bị Map trả về chứa token mới (Không dùng DTO Response)
+            Map<String, String> responseBody = new HashMap<>();
+            responseBody.put("token", newAccessToken);
+            responseBody.put("refreshToken", newRefreshToken.getToken());
+
+            // 12. Trả về thành công
+            return new ResponseEntity<>(responseBody, HttpStatus.OK);
+
+        } catch (Exception e) {
+            System.err.println("Lỗi trong quá trình làm mới token: " + e.getMessage());
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

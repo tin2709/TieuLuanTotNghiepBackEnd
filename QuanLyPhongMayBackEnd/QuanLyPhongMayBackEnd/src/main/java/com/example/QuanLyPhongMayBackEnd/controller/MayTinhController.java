@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 // import java.util.Date; // No longer needed for params
@@ -26,7 +27,7 @@ public class MayTinhController {
     @Autowired
     private MayTinhService mayTinhService;
 
-    // Thêm mới máy tính (CREATE)
+
     @PostMapping("/LuuMayTinh")
     public ResponseEntity<Object> luuMayTinh(
             @RequestParam String tenMay,
@@ -66,7 +67,6 @@ public class MayTinhController {
     }
 
     // ... (other methods remain the same)
-
     // Cập nhật máy tính (UPDATE)
     @PutMapping("/CapNhatMayTinh")
     public ResponseEntity<Object> capNhatMayTinh(
@@ -129,14 +129,12 @@ public class MayTinhController {
         System.out.println("Token: " + token);
         return mayTinhService.findByTrangThai(trangThai, token);
     }
-
     @GetMapping("/DSMayTinh")
     public List<MayTinh> layDSMayTinh(@RequestParam String token) {
 
         System.out.println("Token: " + token);
         return mayTinhService.layDSMayTinh(token);
     }
-
     @DeleteMapping("/XoaMayTinh")
     public ResponseEntity<String> xoa(@RequestParam Long maMay, @RequestParam String token) {
 
@@ -144,7 +142,6 @@ public class MayTinhController {
         mayTinhService.xoa(maMay, token);
         return new ResponseEntity<>("Đã xoá máy tính với mã " + maMay, HttpStatus.OK);
     }
-
     @DeleteMapping("/XoaNhieuMayTinh")
     @Transactional
     public String xoaNhieuPhongMay(@RequestParam List<Long> maMayTinhList, @RequestParam String token) {
@@ -163,7 +160,6 @@ public class MayTinhController {
             throw new RuntimeException("Có lỗi xảy ra khi xoá các máy tính: " + e.getMessage(), e);
         }
     }
-
     @GetMapping("/MayTinh")
     public ResponseEntity<MayTinh> layMayTinhTheoMa(@RequestParam Long maMay, @RequestParam String token) {
 
