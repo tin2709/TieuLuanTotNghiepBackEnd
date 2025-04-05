@@ -1,23 +1,117 @@
-pm.test("Save token after successful login", function () {
+1 
+pm.test("Save tokens after successful login", function () {
     var jsonData = pm.response.json();
-    console.log(jsonData);
+    console.log("Response JSON:", jsonData); // In toàn bộ JSON để debug
 
-    // Kiểm tra xem response có chứa token hay không
-    if (jsonData && jsonData.token) {
+    var tokenFound = false;
+    var refreshTokenFound = false;
+
+    // --- Lưu Access Token ---
+    if (jsonData && jsonData.token) { // Kiểm tra trường 'accessToken'
         var token = jsonData.token;
+        console.log("Token Found:", token);
 
-        // Lưu giá trị token vào các biến
-        pm.environment.set("token", token);
-        pm.globals.set("token", token);
+        // Lưu giá trị accessToken vào các biến
+        pm.environment.set("token", token); // Lưu vào Environment
+        pm.globals.set("token", token);     // Lưu vào Globals
+        // pm.collectionVariables.set("accessToken", accessToken); // Nếu cần lưu vào Collection
 
-        // Nếu bạn muốn lưu vào Collection Variables (thường ít dùng)
-        // pm.collectionVariables.set("token", token);
-
-        // Lưu token vào Vault (nếu bạn sử dụng Vault)
-        // pm.variables.set("token", token); // Để lưu vào Vault, bạn cần sử dụng pm.variables
-
-        console.log("Token has been saved to variables.");
+        tokenFound = true;
     } else {
         console.log("Token not found in response.");
+    }
+
+    // --- Lưu Refresh Token ---
+    if (jsonData && jsonData.refreshToken) { // Kiểm tra trường 'refreshToken'
+        var refreshToken = jsonData.refreshToken;
+        console.log("Refresh Token Found:", refreshToken);
+
+        // Lưu giá trị refreshToken vào các biến
+        pm.environment.set("refreshToken", refreshToken); // Lưu vào Environment
+        pm.globals.set("refreshToken", refreshToken);     // Lưu vào Globals
+        // pm.collectionVariables.set("refreshToken", refreshToken); // Nếu cần lưu vào Collection
+
+        refreshTokenFound = true;
+    } else {
+        console.log("Refresh Token not found in response.");
+    }
+
+    // --- Thông báo kết quả ---
+    if (tokenFound && refreshTokenFound) {
+        console.log("Both Token and Refresh Token have been saved to variables.");
+    } else if (tokenFound) {
+        console.log("Only Token was saved.");
+    } else if (refreshTokenFound) {
+        console.log("Only Refresh Token was saved.");
+    } else {
+         console.log("Neither Token nor Refresh Token were found or saved.");
+    }
+
+    // Tùy chọn: Thêm kiểm tra trạng thái response nếu cần
+    pm.test("Status code is 200", function () {
+        pm.response.to.have.status(200);
+    });
+
+});
+
+2
+pm.test("Update tokens after successful refresh", function () {
+    // 1. Kiểm tra xem request có thành công không (ví dụ: status code 200)
+    pm.test("Status code is 200", function () {
+        pm.response.to.have.status(200);
+    });
+
+    // 2. Parse response JSON
+    var jsonData = pm.response.json();
+    console.log("Refresh Token Response JSON:", jsonData); // In response để debug
+
+    var tokenSaved = false;
+    var refreshTokenSaved = false;
+
+    // 3. Kiểm tra và lưu Access Token MỚI
+    if (jsonData && jsonData.token) {
+        var newToken = jsonData.token;
+        console.log("New Token Found:", newToken);
+
+        // Cập nhật biến môi trường 'token' (giống tên biến trong script login của bạn)
+        pm.environment.set("token", newToken);
+        // Cập nhật biến global 'token'
+        pm.globals.set("token", newToken);
+        // pm.collectionVariables.set("token", newAccessToken); // Nếu cần
+
+        tokenSaved = true;
+    } else {
+        console.log("New Token not found in refresh response.");
+        // Có thể thêm test thất bại nếu bắt buộc phải có access token mới
+        // pm.expect.fail("New Access Token was expected in the refresh response.");
+    }
+
+    // 4. Kiểm tra và lưu Refresh Token MỚI
+    if (jsonData && jsonData.refreshToken) {
+        var newRefreshToken = jsonData.refreshToken;
+        console.log("New Refresh Token Found:", newRefreshToken);
+
+        // Cập nhật biến môi trường 'refreshToken'
+        pm.environment.set("refreshToken", newRefreshToken);
+        // Cập nhật biến global 'refreshToken'
+        pm.globals.set("refreshToken", newRefreshToken);
+        // pm.collectionVariables.set("refreshToken", newRefreshToken); // Nếu cần
+
+        refreshTokenSaved = true;
+    } else {
+        console.log("New Refresh Token not found in refresh response.");
+        // Có thể thêm test thất bại nếu bắt buộc phải có refresh token mới (tùy logic rotation)
+        // pm.expect.fail("New Refresh Token was expected in the refresh response.");
+    }
+
+    // 5. Thông báo kết quả cập nhật
+    if (tokenSaved && refreshTokenSaved) {
+        console.log("Both new Access Token (as 'token') and new Refresh Token have been updated in variables.");
+    } else if (accessTokenSaved) {
+        console.log("Only new Access Token (as 'token') was updated.");
+    } else if (refreshTokenSaved) {
+        console.log("Only new Refresh Token was updated.");
+    } else {
+         console.log("Neither new Token nor new Refresh Token were found or updated.");
     }
 });

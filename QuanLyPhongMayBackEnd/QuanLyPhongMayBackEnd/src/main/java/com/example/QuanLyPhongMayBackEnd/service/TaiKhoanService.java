@@ -36,7 +36,8 @@ public class TaiKhoanService {
     private AuthService authService;
     @Autowired
     private MailService mailService;
-
+    @Autowired
+    private RefreshTokenService refreshTokenService;
     private JwtUtil jwtUtil;
     @Autowired
     public void setJwtUtil(JwtUtil jwtUtil) {
@@ -236,24 +237,81 @@ public class TaiKhoanService {
     }
     @Transactional
     public Map<String, Object> logoutUser(String tokenValue) {
-        // Look up the token in the database
-        Optional<Token> token = tokenRepository.findByToken(tokenValue);
+        // Tìm Access Token trong database
+        Optional<Token> accessTokenOpt = tokenRepository.findByToken(tokenValue);
 
         Map<String, Object> response = new HashMap<>();
 
-        if (token.isPresent()) {
-            // If token exists, delete it from the database
-            tokenRepository.delete(token.get());
+        if (accessTokenOpt.isPresent()) {
+            Token accessToken = accessTokenOpt.get();
+            TaiKhoan taiKhoan = accessToken.getTaiKhoan(); // Lấy tài khoản từ Access Token
+
+            // 1. Xóa Access Token khỏi database (bảng 'token')
+            tokenRepository.delete(accessToken);
+            System.out.println("Đã xóa Access Token: " + tokenValue);
+
+            // 2. Xóa Refresh Token liên quan khỏi database (bảng 'refresh_token')
+            if (taiKhoan != null) {
+                try {
+                    // Gọi phương thức xóa tất cả Refresh Token của người dùng này
+                    int deletedRefreshCount = refreshTokenService.deleteAllTokensByUserId(String.valueOf(taiKhoan.getMaTK()));
+                    System.out.println("Đã xóa " + deletedRefreshCount + " Refresh Token cho tài khoản: " + taiKhoan.getTenDangNhap());
+                } catch (RuntimeException e) {
+                    // Xử lý trường hợp không tìm thấy tài khoản khi xóa refresh token (ít xảy ra nếu accessToken hợp lệ)
+                    System.err.println("Lỗi khi xóa Refresh Token cho tài khoản " + (taiKhoan != null ? taiKhoan.getTenDangNhap() : "unknown") + ": " + e.getMessage());
+                    // Có thể quyết định vẫn trả về success vì Access Token đã bị xóa
+                }
+            } else {
+                System.err.println("Không thể xóa Refresh Token vì không tìm thấy thông tin tài khoản từ Access Token.");
+            }
+
+
             response.put("status", "success");
-            response.put("message", "User logged out successfully");
-            response.put("login", false); // Indicate that the user is no longer logged in
+            response.put("message", "Đăng xuất thành công.");
+            response.put("login", false); // Chỉ báo trạng thái đã logout
         } else {
-            // Token doesn't exist or is invalid
+            // Access Token không tồn tại hoặc không hợp lệ
+            System.out.println("Yêu cầu logout với Access Token không hợp lệ: " + tokenValue);
             response.put("status", "error");
-            response.put("message", "Invalid or expired token");
+            response.put("message", "Token không hợp lệ hoặc đã hết hạn.");
+            // Không cần đặt 'login: false' vì trạng thái login không xác định
         }
 
-        return response; // Return the map directly for use in the controller
+        return response;
+    }
+    @Transactional // Quan trọng: Cần transaction cho delete và save
+    public Token saveAccessToken(String jwtToken, TaiKhoan taiKhoan) {
+        // 1. Xóa hết Access Token cũ của người dùng này
+        int deletedCount = deleteAccessTokenByUser(taiKhoan); // Gọi phương thức xóa nội bộ
+        if (deletedCount > 0) {
+            System.out.println("Đã xóa " + deletedCount + " access token cũ của user: " + taiKhoan.getTenDangNhap());
+        }
+
+        // 2. Tính toán thời gian hết hạn
+        LocalDateTime createdAt = LocalDateTime.now();
+        LocalDateTime expiresAt;
+
+            // Đặt hạn mặc định (ví dụ 1 giờ) nếu không lấy được từ JwtUtil
+            expiresAt = createdAt.plusHours(1);
+            // Hoặc ném lỗi: throw new RuntimeException("Không thể lấy thời gian hết hạn token.", e);
+
+
+        // 3. Tạo và lưu đối tượng Token mới
+        Token accessTokenEntity = new Token(); // Tạo instance mới
+        accessTokenEntity.setToken(jwtToken);
+        accessTokenEntity.setCreatedAt(createdAt);
+        accessTokenEntity.setExpiresAt(expiresAt);
+        accessTokenEntity.setTaiKhoan(taiKhoan);
+
+        return tokenRepository.save(accessTokenEntity);
+    }
+
+
+    @Transactional // Quan trọng: Cần transaction cho thao tác delete
+    public int deleteAccessTokenByUser(TaiKhoan taiKhoan) {
+        System.out.println("Đang xóa access token cho user: " + taiKhoan.getTenDangNhap());
+        // Đảm bảo TokenRepository có phương thức deleteByTaiKhoan
+        return tokenRepository.deleteByTaiKhoan(taiKhoan);
     }
 
 

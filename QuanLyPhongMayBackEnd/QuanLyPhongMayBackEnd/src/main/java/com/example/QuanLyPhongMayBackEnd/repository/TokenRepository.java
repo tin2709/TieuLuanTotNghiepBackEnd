@@ -10,7 +10,7 @@ import java.util.Optional;
 public interface TokenRepository extends JpaRepository<Token, Long> {
     Optional<Token> findByToken(String token);
 
-    void deleteByTaiKhoan(TaiKhoan taiKhoan); // Xóa token theo tài khoản
+    int deleteByTaiKhoan(TaiKhoan taiKhoan); // Xóa token theo tài khoản
 
     void deleteByExpiresAtBefore(LocalDateTime now); // Xóa các token đã hết hạn
 
