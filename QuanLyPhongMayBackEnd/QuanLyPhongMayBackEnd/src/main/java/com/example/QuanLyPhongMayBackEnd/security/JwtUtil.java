@@ -99,5 +99,19 @@ public class JwtUtil {
             throw new RuntimeException("Token không hợp lệ hoặc đã hết hạn.");
         }
     }
+    public Date getExpirationDateFromToken(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .setSigningKey(key) // Sử dụng key đã có
+                    .parseClaimsJws(token)
+                    .getBody();
+            return claims.getExpiration(); // Lấy trường 'exp' dưới dạng Date
+        } catch (Exception e) {
+            // Xử lý nếu token không hợp lệ hoặc không parse được
+            System.err.println("Could not get expiration date from token: " + e.getMessage());
+            return null; // Hoặc throw exception tùy logic của bạn
+        }
+    }
+
 
 }
