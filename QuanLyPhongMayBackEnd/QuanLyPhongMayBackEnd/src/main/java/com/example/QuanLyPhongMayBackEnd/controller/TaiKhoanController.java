@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -124,26 +125,31 @@ public class TaiKhoanController {
         if (taiKhoanOptional.isPresent()) {
             TaiKhoan taiKhoan = taiKhoanOptional.get();
 
-            // 1. Kiểm tra tài khoản bị khóa
             if (taiKhoan.isBanned()) {
                 System.out.println("Login thất bại cho user: " + username + ". Tài khoản bị khóa.");
-                // Trả về chỉ HttpStatus.FORBIDDEN
                 return new ResponseEntity<>(HttpStatus.FORBIDDEN);
             }
 
-            // 2. Kiểm tra mật khẩu
             if (passwordEncoder.matches(password, taiKhoan.getMatKhau())) {
                 try {
                     // 3. Tạo Access Token
                     String accessToken = jwtUtil.generateToken(username);
 
-                    // 4. Lưu Access Token vào DB (Logic cũ)
+                    // *** START: Lấy thời gian hết hạn từ token vừa tạo ***
+                    Date expirationDate = jwtUtil.getExpirationDateFromToken(accessToken);
+                    Long expiresAtTimestamp = (expirationDate != null) ? expirationDate.getTime() : null; // Chuyển sang milliseconds timestamp
+                    // *** END: Lấy thời gian hết hạn ***
+
+                    // 4. Lưu Access Token vào DB (Logic cũ không đổi)
+                    // Lưu ý: TokenService.saveToken tự tính expiresAt riêng cho DB.
+                    // Việc này không sao, miễn là logic nhất quán.
+                    // Timestamp trả về cho client là từ chính JWT.
                     tokenService.saveToken(accessToken, taiKhoan);
 
-                    // 5. Tạo Refresh Token (Lưu vào DB)
+                    // 5. Tạo Refresh Token (Logic cũ không đổi)
                     RefreshToken refreshToken = refreshTokenService.createRefreshToken(String.valueOf(taiKhoan.getMaTK()));
 
-                    // 6. Chuẩn bị Response thành công
+                    // 6. Chuẩn bị Response thành công - Truyền timestamp vào DTO
                     LoginResponseDTO loginResponse = new LoginResponseDTO(
                             accessToken,
                             refreshToken.getToken(),
@@ -151,31 +157,25 @@ public class TaiKhoanController {
                             taiKhoan.getTenDangNhap(),
                             taiKhoan.getEmail(),
                             taiKhoan.getQuyen() != null ? taiKhoan.getQuyen().getMaQuyen() : null,
-                            taiKhoan.getImage()
+                            taiKhoan.getImage(),
+                            expiresAtTimestamp // *** TRUYỀN TIMESTAMP VÀO ĐÂY ***
                     );
 
-                    // 7. Trả về thành công với LoginResponse và OK status
-                    return new ResponseEntity<>(loginResponse, HttpStatus.OK); // Hoặc ResponseEntity.ok(loginResponse);
+                    // 7. Trả về thành công
+                    return new ResponseEntity<>(loginResponse, HttpStatus.OK);
 
                 } catch (Exception e) {
-                    System.err.println("Lỗi khi tạo/lưu token cho user " + username + ": " + e.getMessage());
+                    System.err.println("Lỗi khi tạo/lưu token/lấy expiry cho user " + username + ": " + e.getMessage());
                     e.printStackTrace();
-                    // Trả về chỉ HttpStatus.INTERNAL_SERVER_ERROR
                     return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
                 }
             } else {
-                // Sai mật khẩu
                 System.out.println("Login thất bại cho user: " + username + ". Sai mật khẩu.");
-                // Trả về chỉ HttpStatus.UNAUTHORIZED
                 return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
             }
         } else {
-            // Không tìm thấy user
             System.out.println("Login thất bại. Không tìm thấy user: " + username);
-            // Trả về chỉ HttpStatus.UNAUTHORIZED (như trường hợp sai pass)
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-            // Hoặc trả về NOT_FOUND nếu bạn muốn giữ nguyên như code gốc ban đầu
-            // return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
     @GetMapping("/checkUser")
