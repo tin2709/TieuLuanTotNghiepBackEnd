@@ -14,6 +14,10 @@ public class ChucVu {
     @Column(name = "ten_cv", columnDefinition = "nvarchar(50)", nullable = false)
     private String tenCV;
 
+    public ChucVu(Long maCV) {
+        this.maCV = maCV;
+    }
+
     public Long getMaCV() {
         return maCV;
     }

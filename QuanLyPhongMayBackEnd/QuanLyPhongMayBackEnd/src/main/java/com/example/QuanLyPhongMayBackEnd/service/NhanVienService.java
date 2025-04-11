@@ -63,10 +63,8 @@ public class NhanVienService {
         userRepository.deleteById(String.valueOf(taiKhoan.getMaTK()));
     }
 
-    public NhanVien luu(NhanVien nhanVien,String token) {
-        if (!isUserLoggedIn(token)) {
-            return null; // Token không hợp lệ
-        }
+    public NhanVien luu(NhanVien nhanVien) {
+
         if (nhanVien.getTaiKhoan() != null) {
             Optional<TaiKhoan> kq = userRepository.findById(String.valueOf(nhanVien.getTaiKhoan().getMaTK()));
             TaiKhoan tk = kq.get();
@@ -124,7 +122,7 @@ public class NhanVienService {
         // Map results to DTOs
         return results.stream()
                 .map(nv -> new NhanVienDTO(
-                        nv.getMaNV(),
+                        nv.getMaNhanVien(),
                         nv.getTenNV(),
                         nv.getEmail(),
                         nv.getsDT()

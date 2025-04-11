@@ -47,17 +47,15 @@ public class GiaoVienController {
     // API thêm mới giáo viên
     @PostMapping("/LuuGiaoVien")
     public GiaoVien luu(
-                        @RequestParam String hoTen,
-                        @RequestParam String soDienThoai,
-                        @RequestParam String email,
-                        @RequestParam String hocVi,
-                        @RequestParam Long taiKhoanMaTK,
-                        @RequestParam String khoaMaKhoa,
-                        @RequestParam String token) {
+            @RequestParam String hoTen,
+            @RequestParam String soDienThoai,
+            @RequestParam String email,
+            @RequestParam String hocVi,
+            @RequestParam Long taiKhoanMaTK,
+            @RequestParam Long khoaMaKhoa
+           ) {
 
-        if (!giaoVienService.isUserLoggedIn(token)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token không hợp lệ");
-        }
+
 
         // Tạo đối tượng TaiKhoan và Khoa từ các tham số
         TaiKhoan taiKhoan = new TaiKhoan(taiKhoanMaTK);  // Giả sử TaiKhoan có constructor nhận maTK
@@ -74,8 +72,9 @@ public class GiaoVienController {
 
 
 
-        return giaoVienService.luu(giaoVien, token);
+        return giaoVienService.luu(giaoVien);
     }
+
 
     // API xóa giáo viên theo mã giáo viên
     @DeleteMapping("/XoaGiaoVien/{maGiaoVien}")

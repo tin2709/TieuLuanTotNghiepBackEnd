@@ -25,8 +25,8 @@ public class KhoaController {
 
     // API lấy danh sách khoa
     @GetMapping("/DSKhoa")
-    public List<Khoa> layDSKhoa(@RequestParam String token) {
-        return khoaService.layDSKhoa(token);
+    public List<Khoa> layDSKhoa() {
+        return khoaService.layDSKhoa();
     }
 
     // API lấy khoa theo mã khoa
