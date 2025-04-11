@@ -120,62 +120,74 @@ public class TaiKhoanController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestParam String username, @RequestParam String password) {
 
+        // 1. Tìm tài khoản theo tên đăng nhập
         Optional<TaiKhoan> taiKhoanOptional = taiKhoanService.timTaiKhoanByUsername(username);
 
+        // Kiểm tra xem tài khoản có tồn tại không
         if (taiKhoanOptional.isPresent()) {
             TaiKhoan taiKhoan = taiKhoanOptional.get();
 
+            // 2. Kiểm tra tài khoản có bị khóa không
             if (taiKhoan.isBanned()) {
                 System.out.println("Login thất bại cho user: " + username + ". Tài khoản bị khóa.");
-                return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+                return new ResponseEntity<>(HttpStatus.FORBIDDEN); // 403 Forbidden - Tài khoản bị cấm
             }
 
-            if (passwordEncoder.matches(password, taiKhoan.getMatKhau())) {
-                try {
-                    // 3. Tạo Access Token
-                    String accessToken = jwtUtil.generateToken(username);
 
-                    // *** START: Lấy thời gian hết hạn từ token vừa tạo ***
-                    Date expirationDate = jwtUtil.getExpirationDateFromToken(accessToken);
-                    Long expiresAtTimestamp = (expirationDate != null) ? expirationDate.getTime() : null; // Chuyển sang milliseconds timestamp
-                    // *** END: Lấy thời gian hết hạn ***
-
-                    // 4. Lưu Access Token vào DB (Logic cũ không đổi)
-                    // Lưu ý: TokenService.saveToken tự tính expiresAt riêng cho DB.
-                    // Việc này không sao, miễn là logic nhất quán.
-                    // Timestamp trả về cho client là từ chính JWT.
-                    tokenService.saveToken(accessToken, taiKhoan);
-
-                    // 5. Tạo Refresh Token (Logic cũ không đổi)
-                    RefreshToken refreshToken = refreshTokenService.createRefreshToken(String.valueOf(taiKhoan.getMaTK()));
-
-                    // 6. Chuẩn bị Response thành công - Truyền timestamp vào DTO
-                    LoginResponseDTO loginResponse = new LoginResponseDTO(
-                            accessToken,
-                            refreshToken.getToken(),
-                            taiKhoan.getMaTK(),
-                            taiKhoan.getTenDangNhap(),
-                            taiKhoan.getEmail(),
-                            taiKhoan.getQuyen() != null ? taiKhoan.getQuyen().getMaQuyen() : null,
-                            taiKhoan.getImage(),
-                            expiresAtTimestamp // *** TRUYỀN TIMESTAMP VÀO ĐÂY ***
-                    );
-
-                    // 7. Trả về thành công
-                    return new ResponseEntity<>(loginResponse, HttpStatus.OK);
-
-                } catch (Exception e) {
-                    System.err.println("Lỗi khi tạo/lưu token/lấy expiry cho user " + username + ": " + e.getMessage());
-                    e.printStackTrace();
-                    return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-                }
-            } else {
+            if (taiKhoan.getMatKhau().equals(password)) {
+                System.out.println("Login thành công cho user: " + username + " bằng plain text password match (INSECURE).");
+            } else if (passwordEncoder.matches(password, taiKhoan.getMatKhau())) { // Kiểm tra bằng PasswordEncoder nếu plain text không khớp
+                System.out.println("Login thành công cho user: " + username + " bằng encoded password match.");
+            }
+            else {
+                // Mật khẩu không khớp (cả plain text và encoded)
                 System.out.println("Login thất bại cho user: " + username + ". Sai mật khẩu.");
-                return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+                return new ResponseEntity<>(HttpStatus.UNAUTHORIZED); // 401 Unauthorized - Xác thực thất bại (sai mật khẩu)
             }
+
+            // **ĐĂNG NHẬP THÀNH CÔNG (nếu đến được đây, mật khẩu đã được xác thực)**
+            try {
+                // 4. Tạo Access Token sử dụng JWT
+                String accessToken = jwtUtil.generateToken(username);
+
+                // 5. Lấy thời gian hết hạn từ Access Token
+                Date expirationDate = jwtUtil.getExpirationDateFromToken(accessToken);
+                Long expiresAtTimestamp = (expirationDate != null) ? expirationDate.getTime() : null; // Chuyển sang milliseconds timestamp
+
+                // 6. Lưu Access Token (và có thể cập nhật thời gian hết hạn) vào DB (Tùy chọn - Cần xem xét lại tính cần thiết trong JWT stateless)
+                // Lưu ý: Việc lưu token vào DB có thể không cần thiết trong kiến trúc JWT stateless.
+                // Tuy nhiên, code hiện tại vẫn giữ logic này. Cần đánh giá lại xem có thực sự cần thiết hay không.
+                tokenService.saveToken(accessToken, taiKhoan);
+
+                // 7. Tạo Refresh Token để cấp mới Access Token khi hết hạn
+                RefreshToken refreshToken = refreshTokenService.createRefreshToken(String.valueOf(taiKhoan.getMaTK()));
+
+                // 8. Tạo DTO chứa thông tin phản hồi đăng nhập thành công
+                LoginResponseDTO loginResponse = new LoginResponseDTO( // Consider creating this DTO inside the method scope
+                        accessToken,
+                        refreshToken.getToken(),
+                        taiKhoan.getMaTK(),
+                        taiKhoan.getTenDangNhap(),
+                        taiKhoan.getEmail(),
+                        taiKhoan.getQuyen() != null ? taiKhoan.getQuyen().getMaQuyen() : null,
+                        taiKhoan.getImage(),
+                        expiresAtTimestamp // Truyền timestamp hết hạn vào DTO
+                );
+
+                // 9. Trả về phản hồi thành công (200 OK) kèm theo DTO
+                return new ResponseEntity<>(loginResponse, HttpStatus.OK);
+
+            } catch (Exception e) {
+                // Xử lý lỗi nếu có lỗi xảy ra trong quá trình tạo token, lưu token, ...
+                System.err.println("Lỗi khi tạo/lưu token/lấy expiry cho user " + username + ": " + e.getMessage());
+                e.printStackTrace(); // In stacktrace để debug (chỉ nên dùng trong môi trường dev/test)
+                return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error - Lỗi máy chủ
+            }
+
         } else {
+            // Không tìm thấy tài khoản với tên đăng nhập này
             System.out.println("Login thất bại. Không tìm thấy user: " + username);
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED); // 401 Unauthorized - Xác thực thất bại (không tìm thấy user)
         }
     }
     @GetMapping("/checkUser")
@@ -569,6 +581,21 @@ public class TaiKhoanController {
             System.err.println("Lỗi trong quá trình làm mới token: " + e.getMessage());
             e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    @GetMapping("/taikhoanemail")
+    public ResponseEntity<?> getTaiKhoanByEmail(@RequestParam String email) {
+        try {
+            Optional<TaiKhoan> taiKhoanOptional = taiKhoanRepository.findByEmail(email);
+            if (taiKhoanOptional.isPresent()) {
+                TaiKhoan taiKhoan = taiKhoanOptional.get();
+                return ResponseEntity.ok(taiKhoan); // Return 200 OK with TaiKhoan object
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("status", "error", "message", "Không tìm thấy tài khoản với email: " + email)); // Return 404 Not Found
+            }
+        } catch (Exception e) {
+            Sentry.captureException(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", "error", "message", "Lỗi khi lấy thông tin tài khoản: " + e.getMessage())); // Return 500 Internal Server Error
         }
     }
 
