@@ -35,10 +35,8 @@ public class KhoaService {
         }
     }
     @Cacheable(value = "khoas") // Lưu trữ kết quả trong cache với tên "phongMays"
-    public List<Khoa> layDSKhoa(String token) {
-        if (!isUserLoggedIn(token)) {
-            return null; // Token không hợp lệ
-        }
+    public List<Khoa> layDSKhoa() {
+
         return khoaRepository.findAll();
     }
 

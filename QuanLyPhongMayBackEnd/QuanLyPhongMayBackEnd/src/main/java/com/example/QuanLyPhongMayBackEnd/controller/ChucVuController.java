@@ -28,8 +28,8 @@ public class ChucVuController {
 
     // API lấy danh sách ChucVu
     @GetMapping("/DSChucVu")
-    public List<ChucVu> layDSDV(@RequestParam String token) {
-        return chucVuService.layDSCV(token);
+    public List<ChucVu> layDSDV() {
+        return chucVuService.layDSCV();
     }
 
     // API lấy ChucVu theo mã

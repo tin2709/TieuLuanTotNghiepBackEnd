@@ -31,10 +31,8 @@ public class ChucVuService {
         }
     }
 
-    public List<ChucVu> layDSCV(String token) {
-        if (!isUserLoggedIn(token)) {
-            return null; // Token không hợp lệ
-        }
+    public List<ChucVu> layDSCV() {
+
         return chucVuRepository.findAll();
     }
 

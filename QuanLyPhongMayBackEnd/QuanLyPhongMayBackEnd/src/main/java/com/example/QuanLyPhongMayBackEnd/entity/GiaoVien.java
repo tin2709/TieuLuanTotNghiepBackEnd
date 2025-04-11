@@ -29,7 +29,7 @@ public class GiaoVien {
     private TaiKhoan taiKhoan;
 
 
-    @OneToOne(cascade = CascadeType.MERGE, fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "maKhoa")
     private Khoa khoa;
 

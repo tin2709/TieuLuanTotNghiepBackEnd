@@ -18,8 +18,8 @@ public class Khoa {
     @Column(name = "ten_khoa")
     private String tenKhoa;
 
-    public Khoa(String khoaMaKhoa) {
-        this.maKhoa = Long.valueOf(khoaMaKhoa);
+    public Khoa(Long khoaMaKhoa) {
+        this.maKhoa = khoaMaKhoa;
     }
 
 

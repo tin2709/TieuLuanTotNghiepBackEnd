@@ -2,7 +2,9 @@ package com.example.QuanLyPhongMayBackEnd.service;
 
 import com.example.QuanLyPhongMayBackEnd.DTO.GiaoVienDTO;
 import com.example.QuanLyPhongMayBackEnd.entity.GiaoVien;
+import com.example.QuanLyPhongMayBackEnd.entity.TaiKhoan;
 import com.example.QuanLyPhongMayBackEnd.repository.GiaoVienRepository;
+import com.example.QuanLyPhongMayBackEnd.repository.TaiKhoanRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -23,6 +25,8 @@ public class GiaoVienService {
 
     @Autowired
     private GiaoVienRepository giaoVienRepository;
+    @Autowired
+    private TaiKhoanRepository taiKhoanRepository;
 
     @Autowired
     private UserRepository userRepository;
@@ -69,15 +73,15 @@ public class GiaoVienService {
 
 
 
-    public GiaoVien luu(GiaoVien giaoVien, String token) {
-        if (!isUserLoggedIn(token)) {
-            return null; // Token không hợp lệ
-        }
+    public GiaoVien luu(GiaoVien giaoVien) {
         if (giaoVien.getTaiKhoan() != null) {
-            // Convert the Long value to String before passing it to findById
-            userRepository.findById(String.valueOf(giaoVien.getTaiKhoan().getMaTK()))
-                    .ifPresent(giaoVien::setTaiKhoan);
+            // Kiểm tra tài khoản có tồn tại trong DB chưa
+            TaiKhoan taiKhoan = userRepository.findById(String.valueOf(giaoVien.getTaiKhoan().getMaTK()))
+                    .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại!"));
+
+            giaoVien.setTaiKhoan(taiKhoan); // Gán bản đã tồn tại từ DB
         }
+
         return giaoVienRepository.save(giaoVien);
     }
 

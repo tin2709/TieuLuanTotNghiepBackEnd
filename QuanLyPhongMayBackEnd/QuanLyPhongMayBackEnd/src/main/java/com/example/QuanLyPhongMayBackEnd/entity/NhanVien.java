@@ -9,9 +9,9 @@ import org.hibernate.annotations.OnDeleteAction;
 public class NhanVien {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)  // Đảm bảo trường tự động tăng
-
-    private Long maNV;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "ma_nhan_vien")
+    private Long maNhanVien;
 
     @Column(name = "ten_nv", columnDefinition = "nvarchar(100)", nullable = false)
     private String tenNV;
@@ -28,27 +28,26 @@ public class NhanVien {
     private ChucVu chucVu;
 
     @OneToOne(cascade = CascadeType.MERGE, fetch = FetchType.EAGER)
-    @MapsId
+    // Loại bỏ @MapsId vì nó chỉ nên dùng khi PK của entity này là FK của entity khác và trùng tên. Trong trường hợp này có vẻ không phải vậy.
     @JoinColumn(name = "ma_tk", referencedColumnName = "ma_tk")
-
     @OnDelete(action = OnDeleteAction.CASCADE)
     private TaiKhoan taiKhoan;
 
 
-    public NhanVien(Long maNV, String tenNV, String email, String sDT) {
+    public NhanVien(Long maNhanVien, String tenNV, String email, String sDT) {
         super();
-        this.maNV = maNV;
+        this.maNhanVien = maNhanVien;
         this.tenNV = tenNV;
         this.email = email;
         this.sDT = sDT;
     }
 
-    public Long getMaNV() {
-        return maNV;
+    public Long getMaNhanVien() {
+        return maNhanVien;
     }
 
-    public void setMaNV(Long maNV) {
-        this.maNV = maNV;
+    public void setMaNhanVien(Long maNhanVien) {
+        this.maNhanVien = maNhanVien;
     }
 
     public String getTenNV() {
@@ -94,9 +93,9 @@ public class NhanVien {
     public NhanVien() {
     }
 
-    public NhanVien(Long maNV, String tenNV, String gioiTinh, String email, String soCMND, String sDT,
+    public NhanVien(Long maNhanVien, String tenNV, String gioiTinh, String email, String soCMND, String sDT,
                     String duongDanHinh, ChucVu chucVu, TaiKhoan taiKhoan) {
-        this.maNV = maNV;
+        this.maNhanVien = maNhanVien;
         this.tenNV = tenNV;
         this.email = email;
         this.sDT = sDT;
@@ -106,8 +105,8 @@ public class NhanVien {
 
     @Override
     public String toString() {
-        return String.format("NhanVien [maNV=%s, tenNV=%s, email=%s, sDT=%s, chucVu=%d, taiKhoan=%s]",
-                maNV, tenNV, email, sDT, chucVu != null ? chucVu.getMaCV() : "null",
+        return String.format("NhanVien [maNhanVien=%s, tenNV=%s, email=%s, sDT=%s, chucVu=%d, taiKhoan=%s]",
+                maNhanVien, tenNV, email, sDT, chucVu != null ? chucVu.getMaCV() : "null",
                 taiKhoan != null ? taiKhoan.getMaTK() : "null");
     }
 

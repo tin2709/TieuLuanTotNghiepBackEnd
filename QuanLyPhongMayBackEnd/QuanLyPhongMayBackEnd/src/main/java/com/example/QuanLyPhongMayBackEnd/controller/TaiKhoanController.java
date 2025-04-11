@@ -71,18 +71,20 @@ public class TaiKhoanController {
 //        return fileStorageService.provider_RandomString();
 //    }
     @PostMapping("/luutaikhoan")
-    public String luuTaiKhoan(
-
-            @RequestParam String tenDangNhap,
-            @RequestParam String matKhau,
-            @RequestParam String email,  // New parameter for email
-            @RequestParam(required = false) MultipartFile imageFile,  // Handle the image file
-            @RequestParam String maQuyen  // Assuming quyen is a string for the role ID
-    ) throws IOException {  // New parameter for the role name
+    public ResponseEntity<?> luuTaiKhoan( // Changed return type to ResponseEntity<?>
+                                          @RequestParam String tenDangNhap,
+                                          @RequestParam String matKhau,
+                                          @RequestParam String email,
+                                          @RequestParam(required = false) MultipartFile imageFile,
+                                          @RequestParam String maQuyen
+    ) throws IOException {
 
         // Check if email is already taken
-        if (taiKhoanRepository.findByEmail(email).isPresent()) {
-            return "Email đã được sử dụng!";
+        Optional<TaiKhoan> existingTaiKhoan = taiKhoanRepository.findByEmail(email);
+        if (existingTaiKhoan.isPresent()) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST) // Return 400 status
+                    .body("Email đã được sử dụng!"); // Return error message
         }
 
         // Create a new TaiKhoan instance and set values
@@ -93,8 +95,6 @@ public class TaiKhoanController {
 
         // Map 'quyen' to 'Quyen' object
         Quyen quyen = new Quyen(maQuyen);
-
-
         taiKhoan.setQuyen(quyen);
 
         // Encrypt the password before saving
@@ -103,17 +103,17 @@ public class TaiKhoanController {
 
         // Handle image upload to Cloudinary (if provided)
         if (imageFile != null && !imageFile.isEmpty()) {
-            String imageUrl = uploadImageFile.uploadImage(imageFile);  // Call the file upload service to upload the image to Cloudinary
-            taiKhoan.setImage(imageUrl);  // Set the image URL from Cloudinary
+            String imageUrl = uploadImageFile.uploadImage(imageFile);
+            taiKhoan.setImage(imageUrl);
         }
 
         // Save the account to the database
-        taiKhoanService.luu(taiKhoan);
+        TaiKhoan savedTaiKhoan = taiKhoanService.luu(taiKhoan); // Get the saved TaiKhoan object
 
         // Send confirmation email after successful registration
         mailService.sendConfirmationEmail(email);
 
-        return "Tài khoản đã được lưu thành công!";
+        return ResponseEntity.ok(savedTaiKhoan); // Return 200 status with the saved TaiKhoan object
     }
 
 

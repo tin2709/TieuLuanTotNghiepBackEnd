@@ -1,7 +1,9 @@
 package com.example.QuanLyPhongMayBackEnd.controller;
 
 import com.example.QuanLyPhongMayBackEnd.DTO.NhanVienDTO;
+import com.example.QuanLyPhongMayBackEnd.entity.ChucVu;
 import com.example.QuanLyPhongMayBackEnd.entity.NhanVien;
+import com.example.QuanLyPhongMayBackEnd.entity.TaiKhoan;
 import com.example.QuanLyPhongMayBackEnd.service.NhanVienService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -40,24 +42,25 @@ public class NhanVienController {
 
     // API lưu nhân viên
     @PostMapping("/LuuNhanVien")
-    public NhanVien luu(@RequestParam Long maNV,
+    public NhanVien luu(
                         @RequestParam String tenNV,
                         @RequestParam String email,
                         @RequestParam String sDT,
-                        @RequestParam String maCV,
-                        @RequestParam String token) {
+                        @RequestParam Long maCV,
+                        @RequestParam Long taiKhoanMaTK) {
         // Tạo đối tượng NhanVien từ các tham số
+        TaiKhoan taiKhoan = new TaiKhoan(taiKhoanMaTK);  // Giả sử TaiKhoan có constructor nhận maTK
+        ChucVu chucVu = new ChucVu(maCV);
         NhanVien nhanVien = new NhanVien();
-        nhanVien.setMaNV(maNV);
         nhanVien.setTenNV(tenNV);
         nhanVien.setEmail(email);
         nhanVien.setsDT(sDT);
+        nhanVien.setTaiKhoan(taiKhoan);
+        nhanVien.setChucVu(chucVu);
 
-        // Bạn sẽ cần xử lý để lấy thông tin ChucVu từ maCV nếu cần
-        // ChucVu chucVu = chucVuService.layChucVuTheoMa(maCV);
-        // nhanVien.setChucVu(chucVu);
 
-        return nhanVienService.luu(nhanVien,token);
+
+        return nhanVienService.luu(nhanVien);
     }
 
     // API xóa nhân viên theo mã nhân viên
