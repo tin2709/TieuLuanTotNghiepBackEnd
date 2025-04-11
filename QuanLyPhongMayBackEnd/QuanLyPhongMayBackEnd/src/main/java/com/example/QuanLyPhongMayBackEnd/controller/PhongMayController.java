@@ -223,6 +223,14 @@ public class PhongMayController {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+    @GetMapping("/thong-ke-may-tinh-theo-thoi-gian")
+    public ResponseEntity<List<Map<String, Object>>> layThongKeMayTinhTheoThoiGian(@RequestParam String token) {
+        if (!phongMayService.isUserLoggedIn(token)) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+        List<Map<String, Object>> thongKe = phongMayService.thongKeMayTinhTheoThoiGian(token);
+        return new ResponseEntity<>(thongKe, HttpStatus.OK);
+    }
 
 
 
