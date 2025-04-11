@@ -7,6 +7,7 @@ import com.example.QuanLyPhongMayBackEnd.entity.CaThucHanh;
 import com.example.QuanLyPhongMayBackEnd.entity.MayTinh;
 import com.example.QuanLyPhongMayBackEnd.entity.PhongMay;
 import com.example.QuanLyPhongMayBackEnd.entity.Tang;
+import com.example.QuanLyPhongMayBackEnd.repository.MayTinhRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.PhongMayRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.TangRepository;
 import com.example.QuanLyPhongMayBackEnd.security.JwtUtil;
@@ -22,13 +23,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Scanner;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -70,6 +69,8 @@ public class PhongMayService {
 
     @Autowired
     private JwtUtil jwtUtil;
+    @Autowired
+    private MayTinhRepository mayTinhRepository;
 
     @Scheduled(cron = "0 0 0 * * ?") // Run every day at 00:00:00
     public void dailyLogSummary() {
@@ -580,6 +581,51 @@ public class PhongMayService {
             writeLog(username, "layDanhSachPhongMayVaThongKe - Error: " + e.getMessage());
             throw e;
         }
+    }
+    public List<Map<String, Object>> thongKeMayTinhTheoThoiGian(String token) {
+        String username = jwtUtil.getUsernameFromToken(token);
+        if (!isUserLoggedIn(token)) {
+            writeLog(username, "thongKeMayTinhTheoThoiGian - Unauthorized access attempt.");
+            return null; // Or throw an exception
+        }
+
+        List<MayTinh> allMayTinhs = mayTinhRepository.findAll();
+        if (allMayTinhs.isEmpty()) {
+            return Collections.emptyList(); // Return empty list if no computers found
+        }
+
+        Map<Date, Map<String, Integer>> dailyStats = new LinkedHashMap<>(); // Use LinkedHashMap to maintain order
+
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+
+        allMayTinhs.forEach(mayTinh -> {
+            Date lapDatDate = mayTinh.getNgayLapDat();
+            if (lapDatDate != null) {
+                Date dateOnly = null;
+                try {
+                    dateOnly = dateFormat.parse(dateFormat.format(lapDatDate)); // Get date-only part
+                } catch (Exception e) {
+                    e.printStackTrace(); // Handle parse exception, maybe log it
+                    return; // Skip this entry if date parsing fails
+                }
+
+                Map<String, Integer> statusCounts = dailyStats.computeIfAbsent(dateOnly, k -> new HashMap<>());
+                statusCounts.merge(mayTinh.getTrangThai(), 1, Integer::sum); // Increment count for status
+            }
+        });
+
+        List<Map<String, Object>> chartData = new ArrayList<>();
+        dailyStats.forEach((date, statusCounts) -> {
+            Map<String, Object> dataPoint = new HashMap<>();
+            dataPoint.put("time", date);
+            dataPoint.put("Dang hoạt động", statusCounts.getOrDefault("Đang hoạt động", 0));
+            dataPoint.put("Đã hỏng", statusCounts.getOrDefault("Đã hỏng", 0));
+            dataPoint.put("Không hoạt động", statusCounts.getOrDefault("Không hoạt động", 0));
+            chartData.add(dataPoint);
+        });
+
+        writeLog(username, "thongKeMayTinhTheoThoiGian - Statistics generated for " + chartData.size() + " days.");
+        return chartData;
     }
 
 
