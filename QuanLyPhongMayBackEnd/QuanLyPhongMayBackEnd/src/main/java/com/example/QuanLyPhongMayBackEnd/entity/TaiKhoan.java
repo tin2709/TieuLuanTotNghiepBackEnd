@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.time.LocalDateTime; // Import LocalDateTime
 
 @Entity
 @Table(name = "tai_khoan")
@@ -42,8 +43,16 @@ public class TaiKhoan {
     @Column(name = "is_banned", nullable = false)
     private boolean isBanned = false;  // Default value set to false (not banned)
 
+    // New fields for failed login attempts tracking
+    @Column(name = "failed_login_attempts", nullable = false)
+    private int failedLoginAttempts = 0; // Default to 0
+
+    @Column(name = "last_failed_login_time")
+    private LocalDateTime lastFailedLoginTime; // To store the timestamp of the last failed login
+
+
     // Constructor for initializing all fields
-    public TaiKhoan(Long maTK, String tenDangNhap, String matKhau, Quyen quyen, String email, String image, boolean isBanned) {
+    public TaiKhoan(Long maTK, String tenDangNhap, String matKhau, Quyen quyen, String email, String image, boolean isBanned, int failedLoginAttempts, LocalDateTime lastFailedLoginTime) {
         this.maTK = maTK;
         this.tenDangNhap = tenDangNhap;
         this.matKhau = matKhau;
@@ -51,6 +60,8 @@ public class TaiKhoan {
         this.email = email;
         this.image = image;
         this.isBanned = isBanned;
+        this.failedLoginAttempts = failedLoginAttempts;
+        this.lastFailedLoginTime = lastFailedLoginTime;
     }
 
     // Constructor with only maTK
@@ -59,6 +70,24 @@ public class TaiKhoan {
     }
 
     // Getter and Setter methods
+
+    public int getFailedLoginAttempts() {
+        return failedLoginAttempts;
+    }
+
+    public void setFailedLoginAttempts(int failedLoginAttempts) {
+        this.failedLoginAttempts = failedLoginAttempts;
+    }
+
+    public LocalDateTime getLastFailedLoginTime() {
+        return lastFailedLoginTime;
+    }
+
+    public void setLastFailedLoginTime(LocalDateTime lastFailedLoginTime) {
+        this.lastFailedLoginTime = lastFailedLoginTime;
+    }
+
+
     public Long getMaTK() { return maTK; }
     public void setMaTK(Long maTK) { this.maTK = maTK; }
 
@@ -87,6 +116,6 @@ public class TaiKhoan {
 
     @Override
     public String toString() {
-        return "TaiKhoan [maTK=" + maTK + ", tenDangNhap=" + tenDangNhap + ", matKhau=" + matKhau + ", quyen=" + quyen + ", email=" + email + ", image=" + image + ", isBanned=" + isBanned + "]";
+        return "TaiKhoan [maTK=" + maTK + ", tenDangNhap=" + tenDangNhap + ", matKhau=" + matKhau + ", quyen=" + quyen + ", email=" + email + ", image=" + image + ", isBanned=" + isBanned + ", failedLoginAttempts=" + failedLoginAttempts + ", lastFailedLoginTime=" + lastFailedLoginTime + "]";
     }
 }

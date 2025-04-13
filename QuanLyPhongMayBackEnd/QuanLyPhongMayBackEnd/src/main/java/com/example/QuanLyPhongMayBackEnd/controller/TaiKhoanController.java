@@ -21,15 +21,21 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
-        import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+
+import static com.example.QuanLyPhongMayBackEnd.service.TaiKhoanService.BLOCK_DURATION;
+import static com.example.QuanLyPhongMayBackEnd.service.TaiKhoanService.MAX_FAILED_ATTEMPTS;
+
 @CrossOrigin
 @RestController
 public class TaiKhoanController {
@@ -116,37 +122,55 @@ public class TaiKhoanController {
         return ResponseEntity.ok(savedTaiKhoan); // Return 200 status with the saved TaiKhoan object
     }
 
-
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestParam String username, @RequestParam String password) {
 
-        // 1. Tìm tài khoản theo tên đăng nhập
-        Optional<TaiKhoan> taiKhoanOptional = taiKhoanService.timTaiKhoanByUsername(username);
+        Optional<TaiKhoan> taiKhoanOptional = taiKhoanRepository.findByTenDangNhap(username);
 
-        // Kiểm tra xem tài khoản có tồn tại không
-        if (taiKhoanOptional.isPresent()) {
-            TaiKhoan taiKhoan = taiKhoanOptional.get();
+        if (!taiKhoanOptional.isPresent()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                    "status", "error",
+                    "message", "Tên đăng nhập hoặc mật khẩu không chính xác." // Changed message to be generic
+            ));
+        }
 
-            // 2. Kiểm tra tài khoản có bị khóa không
-            if (taiKhoan.isBanned()) {
-                System.out.println("Login thất bại cho user: " + username + ". Tài khoản bị khóa.");
-                return new ResponseEntity<>(HttpStatus.FORBIDDEN); // 403 Forbidden - Tài khoản bị cấm
+        TaiKhoan taiKhoan = taiKhoanOptional.get();
+
+        //  Kiểm tra tài khoản có bị chặn không (isBanned) - Keeping old check
+        if (taiKhoan.isBanned()) {
+            System.out.println("Login thất bại cho user: " + username + ". Tài khoản bị khóa.");
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN); // 403 Forbidden - Tài khoản bị cấm
+        }
+
+        // Kiểm tra tài khoản có bị khóa không (isAccountLocked) - Keeping old check
+        if (taiKhoanService.isAccountLocked(taiKhoan)) {
+            Duration timeSinceLastFail = Duration.between(taiKhoan.getLastFailedLoginTime(), LocalDateTime.now());
+            Duration timeLeft = BLOCK_DURATION.minus(timeSinceLastFail);
+            if (timeLeft.isNegative() || timeLeft.isZero()) {
+                // Hết thời gian khóa, reset lại số lần đăng nhập sai và cho phép đăng nhập lại
+                taiKhoanService.resetFailedAttempts(taiKhoan);
+            } else {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                        "status", "error",
+                        "message", "Tài khoản tạm thời bị khóa. Vui lòng thử lại sau " + timeLeft.toMinutes() + " phút."
+                ));
             }
+        }
 
+        boolean passwordMatch = false; // Flag to track password match
 
-            if (taiKhoan.getMatKhau().equals(password)) {
-                System.out.println("Login thành công cho user: " + username + " bằng plain text password match (INSECURE).");
-            } else if (passwordEncoder.matches(password, taiKhoan.getMatKhau())) { // Kiểm tra bằng PasswordEncoder nếu plain text không khớp
-                System.out.println("Login thành công cho user: " + username + " bằng encoded password match.");
-            }
-            else {
-                // Mật khẩu không khớp (cả plain text và encoded)
-                System.out.println("Login thất bại cho user: " + username + ". Sai mật khẩu.");
-                return new ResponseEntity<>(HttpStatus.UNAUTHORIZED); // 401 Unauthorized - Xác thực thất bại (sai mật khẩu)
-            }
+        if (taiKhoan.getMatKhau().equals(password)) {
+            System.out.println("Login thành công cho user: " + username + " bằng plain text password match (INSECURE).");
+            passwordMatch = true;
+        } else if (passwordEncoder.matches(password, taiKhoan.getMatKhau())) { // Kiểm tra bằng PasswordEncoder nếu plain text không khớp
+            System.out.println("Login thành công cho user: " + username + " bằng encoded password match.");
+            passwordMatch = true;
+        }
 
-            // **ĐĂNG NHẬP THÀNH CÔNG (nếu đến được đây, mật khẩu đã được xác thực)**
+        if (passwordMatch) { // If password matched (either plain text or encoded) - Correct placement for success logic
             try {
+                taiKhoanService.resetFailedAttempts(taiKhoan); // Reset failed attempts on successful login
+
                 // 4. Tạo Access Token sử dụng JWT
                 String accessToken = jwtUtil.generateToken(username);
 
@@ -154,15 +178,15 @@ public class TaiKhoanController {
                 Date expirationDate = jwtUtil.getExpirationDateFromToken(accessToken);
                 Long expiresAtTimestamp = (expirationDate != null) ? expirationDate.getTime() : null; // Chuyển sang milliseconds timestamp
 
-                // 6. Lưu Access Token (và có thể cập nhật thời gian hết hạn) vào DB (Tùy chọn - Cần xem xét lại tính cần thiết trong JWT stateless)
-                // Lưu ý: Việc lưu token vào DB có thể không cần thiết trong kiến trúc JWT stateless.
-                // Tuy nhiên, code hiện tại vẫn giữ logic này. Cần đánh giá lại xem có thực sự cần thiết hay không.
-                tokenService.saveToken(accessToken, taiKhoan);
+                // 6. Lưu Access Token (and optionally update expiration time) in DB (Optional - Reconsider necessity in stateless JWT)
+                // Note: Saving token to DB might not be necessary in stateless JWT architecture.
+                // However, current code keeps this logic. Re-evaluate if it's really needed.
+                taiKhoanService.saveAccessToken(accessToken, taiKhoan); // Using saveAccessToken method in service
 
-                // 7. Tạo Refresh Token để cấp mới Access Token khi hết hạn
+                // 7. Create Refresh Token to issue new Access Tokens when expired
                 RefreshToken refreshToken = refreshTokenService.createRefreshToken(String.valueOf(taiKhoan.getMaTK()));
 
-                // 8. Tạo DTO chứa thông tin phản hồi đăng nhập thành công
+                // 8. Create DTO containing successful login response information
                 LoginResponseDTO loginResponse = new LoginResponseDTO( // Consider creating this DTO inside the method scope
                         accessToken,
                         refreshToken.getToken(),
@@ -171,25 +195,38 @@ public class TaiKhoanController {
                         taiKhoan.getEmail(),
                         taiKhoan.getQuyen() != null ? taiKhoan.getQuyen().getMaQuyen() : null,
                         taiKhoan.getImage(),
-                        expiresAtTimestamp // Truyền timestamp hết hạn vào DTO
+                        expiresAtTimestamp // Pass expiration timestamp to DTO
                 );
 
-                // 9. Trả về phản hồi thành công (200 OK) kèm theo DTO
+                // 9. Return successful response (200 OK) with DTO
                 return new ResponseEntity<>(loginResponse, HttpStatus.OK);
 
             } catch (Exception e) {
-                // Xử lý lỗi nếu có lỗi xảy ra trong quá trình tạo token, lưu token, ...
+                // Handle errors if any occur during token creation, saving token, ...
                 System.err.println("Lỗi khi tạo/lưu token/lấy expiry cho user " + username + ": " + e.getMessage());
-                e.printStackTrace(); // In stacktrace để debug (chỉ nên dùng trong môi trường dev/test)
-                return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error - Lỗi máy chủ
+                e.printStackTrace(); // Print stacktrace for debugging (should only be used in dev/test environments)
+                return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error - Server error
             }
 
-        } else {
-            // Không tìm thấy tài khoản với tên đăng nhập này
-            System.out.println("Login thất bại. Không tìm thấy user: " + username);
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED); // 401 Unauthorized - Xác thực thất bại (không tìm thấy user)
+        } else { // If password did NOT match (both plain text and encoded failed) - Correct placement for failure logic
+            // Đăng nhập thất bại
+            taiKhoanService.incrementFailedAttempts(taiKhoan);
+            int remainingAttempts = MAX_FAILED_ATTEMPTS - taiKhoan.getFailedLoginAttempts(); // Calculate remaining login attempts
+            String errorMessage = "Tên đăng nhập hoặc mật khẩu không chính xác. Bạn còn lại " + remainingAttempts + " lần thử đăng nhập.";
+            if (remainingAttempts <= 0) {
+                errorMessage = "Bạn đã hết số lần thử đăng nhập. Tài khoản tạm thời bị khóa trong 1 phút.";
+            }
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                    "status", "error",
+                    "message", errorMessage // Use more detailed error message
+            ));
         }
     }
+
+
+
+
+
     @GetMapping("/checkUser")
     public ResponseEntity<Map<String, Object>> checkUser(@RequestParam String username,
                                                          @RequestParam String password) {
@@ -203,6 +240,7 @@ public class TaiKhoanController {
 
             // Kiểm tra nếu mật khẩu đã mã hóa đúng
             if (passwordEncoder.matches(password, taiKhoan.getMatKhau())) {
+
                 response.put("status", "success");
                 response.put("message", "User found");
                 response.put("data", Map.of(
