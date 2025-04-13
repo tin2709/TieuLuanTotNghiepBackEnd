@@ -35,7 +35,7 @@ public class CaThucHanh {
 
     @Column(name = "buoi_so")
     @Min(value = 1, message = "Buổi số phải lớn hơn hoặc bằng 1")
-    @Max(value = 2, message = "Buổi số phải nhỏ hơn hoặc bằng 2")
+    @Max(value = 15, message = "Buổi số phải nhỏ hơn hoặc bằng 15")
     private int buoiSo;
 
     @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.EAGER)

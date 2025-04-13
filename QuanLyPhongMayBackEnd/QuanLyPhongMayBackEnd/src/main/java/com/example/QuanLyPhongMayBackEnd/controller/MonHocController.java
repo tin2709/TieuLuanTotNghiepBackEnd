@@ -25,12 +25,14 @@ public class MonHocController {
     @PostMapping("/LuuMonHoc")
     public MonHoc luu(@RequestParam String tenMon,
                       @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date ngayBatDau,
+                      @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date ngayKetThuc,
                       @RequestParam int soBuoi,
                       @RequestParam String token) {
         // Tạo đối tượng MonHoc từ các tham số
         MonHoc monHoc = new MonHoc();
         monHoc.setTenMon(tenMon);
         monHoc.setNgayBatDau(ngayBatDau);
+        monHoc.setNgayKetThuc(ngayKetThuc);
         monHoc.setSoBuoi(soBuoi);
 
         // Lưu môn học

@@ -2,7 +2,13 @@ package com.example.QuanLyPhongMayBackEnd.service;
 
 import com.example.QuanLyPhongMayBackEnd.DTO.CaThucHanhDTO;
 import com.example.QuanLyPhongMayBackEnd.entity.CaThucHanh;
+import com.example.QuanLyPhongMayBackEnd.entity.GiaoVien;
+import com.example.QuanLyPhongMayBackEnd.entity.MonHoc;
+import com.example.QuanLyPhongMayBackEnd.entity.PhongMay;
 import com.example.QuanLyPhongMayBackEnd.repository.CaThucHanhRepository;
+import com.example.QuanLyPhongMayBackEnd.repository.GiaoVienRepository;
+import com.example.QuanLyPhongMayBackEnd.repository.MonHocRepository;
+import com.example.QuanLyPhongMayBackEnd.repository.PhongMayRepository;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
@@ -17,7 +23,12 @@ import java.util.stream.Collectors;
 public class CaThucHanhService {
     @Autowired
     private CaThucHanhRepository caThucHanhRepository;
-
+    @Autowired
+    private MonHocRepository monHocRepository;
+    @Autowired
+    private PhongMayRepository phongMayRepository;
+    @Autowired
+    private GiaoVienRepository giaoVienRepository;
     @Autowired
     private TaiKhoanService taiKhoanService;
 
@@ -85,10 +96,26 @@ public class CaThucHanhService {
         return caThucHanhRepository.save(caThucHanh);
     }
 
-    public CaThucHanh luu(CaThucHanh caThucHanh, String token) {
+    public CaThucHanh luu(CaThucHanh caThucHanh, String token, Long maGiaoVien, Long maPhong, Long maMon) {
         if (!isUserLoggedIn(token)) {
             return null; // Token không hợp lệ
         }
+
+        // Fetch GiaoVien, PhongMay, and MonHoc from the database
+        GiaoVien giaoVien = giaoVienRepository.findById(String.valueOf(maGiaoVien)).orElse(null);
+        PhongMay phongMay = phongMayRepository.findById(maPhong).orElse(null);
+        MonHoc monHoc = monHocRepository.findById(maMon).orElse(null);
+
+        if (giaoVien == null || phongMay == null || monHoc == null) {
+            // Handle the case where related entities are not found (e.g., throw an exception or return null)
+            return null; // Or throw EntityNotFoundException
+        }
+
+        // Set the fetched entities to CaThucHanh
+        caThucHanh.setGiaoVien(giaoVien);
+        caThucHanh.setPhongMay(phongMay);
+        caThucHanh.setMonHoc(monHoc);
+
         return caThucHanhRepository.save(caThucHanh);
     }
 
@@ -167,6 +194,12 @@ public class CaThucHanhService {
                         caThucHanh.getTietKetThuc(),
                         caThucHanh.getBuoiSo()))
                 .collect(Collectors.toList());
+    }
+    public List<CaThucHanh> layDSCaThucHanhTheoTenGiaoVien(String hoTenGiaoVien, String token) { // Changed parameter name to hoTenGiaoVien
+        if (!isUserLoggedIn(token)) {
+            return null;
+        }
+        return caThucHanhRepository.findByGiaoVien_HoTen(hoTenGiaoVien); // Corrected to HoTen to match GiaoVien entity field
     }
 
 
