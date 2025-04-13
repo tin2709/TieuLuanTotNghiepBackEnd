@@ -14,9 +14,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -47,6 +49,8 @@ public class TaiKhoanService {
     public void xoa(String maTK) {
         taiKhoanRepository.deleteById(maTK);
     }
+    public static final int MAX_FAILED_ATTEMPTS = 4;
+    public static final Duration BLOCK_DURATION = Duration.ofMinutes(1);
 
     // Lưu tài khoản
     public TaiKhoan luu(TaiKhoan taiKhoan) {
@@ -313,6 +317,44 @@ public class TaiKhoanService {
         // Đảm bảo TokenRepository có phương thức deleteByTaiKhoan
         return tokenRepository.deleteByTaiKhoan(taiKhoan);
     }
+    @Scheduled(fixedRate = 60000)
+    public void unlockAccountsPeriodically() {
+        System.out.println("Running scheduled task to unlock accounts...");
+        taiKhoanRepository.findAll().forEach(taiKhoan -> {
+            if (taiKhoan.getFailedLoginAttempts() > 0 && taiKhoan.getLastFailedLoginTime() != null) {
+                if (isBlockDurationExpired(taiKhoan)) {
+                    resetFailedAttempts(taiKhoan);
+                    System.out.println("Tài khoản " + taiKhoan.getTenDangNhap() + " đã được mở khóa tự động.");
+                }
+            }
+        });
+        System.out.println("Scheduled task finished.");
+    }
+
+    private boolean isBlockDurationExpired(TaiKhoan taiKhoan) {
+        LocalDateTime blockEndTime = taiKhoan.getLastFailedLoginTime().plus(BLOCK_DURATION);
+        return LocalDateTime.now().isAfter(blockEndTime);
+    }
+    public boolean isAccountLocked(TaiKhoan taiKhoan) {
+        return taiKhoan.getFailedLoginAttempts() >= MAX_FAILED_ATTEMPTS;
+    }
+
+    public void incrementFailedAttempts(TaiKhoan taiKhoan) {
+        int attempts = taiKhoan.getFailedLoginAttempts() + 1;
+        taiKhoan.setFailedLoginAttempts(attempts);
+        if (attempts == MAX_FAILED_ATTEMPTS) { // Check if attempts reached MAX_FAILED_ATTEMPTS
+            taiKhoan.setLastFailedLoginTime(LocalDateTime.now()); // Set last failed login time only when locked
+        }
+        taiKhoanRepository.save(taiKhoan);
+    }
+
+
+    public void resetFailedAttempts(TaiKhoan taiKhoan) {
+        taiKhoan.setFailedLoginAttempts(0);
+        taiKhoan.setLastFailedLoginTime(null); // Reset last failed login time when attempts are reset
+        taiKhoanRepository.save(taiKhoan);
+    }
+
 
 
 }
