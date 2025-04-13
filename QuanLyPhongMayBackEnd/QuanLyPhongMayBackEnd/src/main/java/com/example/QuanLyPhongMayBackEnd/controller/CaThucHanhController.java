@@ -39,8 +39,17 @@ public class CaThucHanhController {
             return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
         }
 
-        CaThucHanh caThucHanh = caThucHanhService.luu(new CaThucHanh(null, ngayThucHanh, tenCa, tietBatDau, tietKetThuc, buoiSo,
-                new GiaoVien(maGiaoVien), new PhongMay(maPhong), new MonHoc(maMon)), token);
+        // Create CaThucHanh object without related entities initially
+        CaThucHanh caThucHanh = new CaThucHanh(null, ngayThucHanh, tenCa, tietBatDau, tietKetThuc, buoiSo,
+                null, null, null); // Set related entities to null initially
+
+        // Call the service method with IDs to fetch related entities
+        caThucHanh = caThucHanhService.luu(caThucHanh, token, maGiaoVien, maPhong, maMon);
+
+        if (caThucHanh == null) {
+            // Handle the case where related entities were not found (service returned null)
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST); // Or another appropriate status
+        }
 
         return new ResponseEntity<>(caThucHanh, HttpStatus.CREATED);
     }
@@ -141,6 +150,7 @@ public class CaThucHanhController {
         caThucHanhService.xoa(maCaThucHanh, token);
         return new ResponseEntity<>("Đã xoá ca thực hành với mã " + maCaThucHanh, HttpStatus.OK);
     }
+
     @GetMapping("/searchCaThucHanh")
     public ResponseEntity<Map<String, Object>> timKiemCaThucHanh(@RequestParam String keyword, @RequestParam String token) {
         if (!caThucHanhService.isUserLoggedIn(token)) {
@@ -166,6 +176,25 @@ public class CaThucHanhController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @GetMapping("/DSCaThucHanhTheoGiaoVienTen") // Updated API path to be more consistent
+    public ResponseEntity<List<CaThucHanh>> layDSCaThucHanhTheoTenGiaoVien(
+            @RequestParam String hoTenGiaoVien, // Changed parameter name to hoTenGiaoVien to match entity field
+            @RequestParam String token) {
+        if (!caThucHanhService.isUserLoggedIn(token)) {
+            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        }
 
+        // Call service method with the corrected parameter name
+        List<CaThucHanh> dsCaThucHanh = caThucHanhService.layDSCaThucHanhTheoTenGiaoVien(hoTenGiaoVien, token);
+
+        if (dsCaThucHanh.isEmpty()) {
+            return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>(dsCaThucHanh, HttpStatus.OK);
+    }
 
 }
+
+
+
