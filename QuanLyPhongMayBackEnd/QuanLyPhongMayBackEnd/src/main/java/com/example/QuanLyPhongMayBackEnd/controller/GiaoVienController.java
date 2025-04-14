@@ -119,4 +119,29 @@ public class GiaoVienController {
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+    @GetMapping("/searchGiaoVienByAdmin")
+    public ResponseEntity<Map<String, Object>> searchGiaoVienByAdmin(@RequestParam String keyword, @RequestParam String token) {
+        if (!giaoVienService.isUserLoggedIn(token)) {
+            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        }
+
+        // Validate the keyword
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+
+        // Perform the search
+        List<GiaoVienDTO> results = giaoVienService.timKiemGiaoVienByAdmin(keyword, token);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("results", results);
+        response.put("size", results.size());
+
+        if (results == null || results.isEmpty()) {
+            return new ResponseEntity<>(response, HttpStatus.NO_CONTENT);
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
 }

@@ -62,7 +62,10 @@ public class PhongMayController {
 
     @GetMapping("/DSPhongMay")
     public List<PhongMay> layDSPhongMay(@RequestParam String token) {
-        // Handle token validation if necessary
+        // Cập nhật trạng thái phòng máy trước khi lấy danh sách
+        phongMayService.capNhatTrangThaiPhongMayTheoThoiGianThuc();
+
+        // Lấy danh sách phòng máy (chức năng hiện tại)
         return phongMayService.layDSPhongMay(token);
     }
 
