@@ -7,13 +7,15 @@ public class GiaoVienDTO {
     private String soDienThoai;
     private String email;
     private String hocVi;
+    private String tenKhoa; // Added tenKhoa to DTO
 
-    public GiaoVienDTO(Long maGiaoVien, String hoTen, String soDienThoai, String email, String hocVi) {
+    public GiaoVienDTO(Long maGiaoVien, String hoTen, String soDienThoai, String email, String hocVi, String tenKhoa) {
         this.maGiaoVien = maGiaoVien;
         this.hoTen = hoTen;
         this.soDienThoai = soDienThoai;
         this.email = email;
         this.hocVi = hocVi;
+        this.tenKhoa = tenKhoa; // Initialize tenKhoa
     }
 
     // Getters and Setters
@@ -56,5 +58,12 @@ public class GiaoVienDTO {
     public void setHocVi(String hocVi) {
         this.hocVi = hocVi;
     }
-}
 
+    public String getTenKhoa() {
+        return tenKhoa;
+    }
+
+    public void setTenKhoa(String tenKhoa) {
+        this.tenKhoa = tenKhoa;
+    }
+}

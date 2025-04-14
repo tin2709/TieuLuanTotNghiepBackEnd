@@ -3,10 +3,8 @@ package com.example.QuanLyPhongMayBackEnd.service;
 import com.example.QuanLyPhongMayBackEnd.DTO.MayTinhDTO;
 import com.example.QuanLyPhongMayBackEnd.DTO.PhongMayDTO;
 import com.example.QuanLyPhongMayBackEnd.DTO.QRDTO;
-import com.example.QuanLyPhongMayBackEnd.entity.CaThucHanh;
-import com.example.QuanLyPhongMayBackEnd.entity.MayTinh;
-import com.example.QuanLyPhongMayBackEnd.entity.PhongMay;
-import com.example.QuanLyPhongMayBackEnd.entity.Tang;
+import com.example.QuanLyPhongMayBackEnd.entity.*;
+import com.example.QuanLyPhongMayBackEnd.repository.CaThucHanhRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.MayTinhRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.PhongMayRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.TangRepository;
@@ -24,6 +22,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.time.LocalDateTime;
@@ -63,6 +63,9 @@ public class PhongMayService {
 
     @Autowired
     private TangRepository tangRepository;
+
+    @Autowired
+    private CaThucHanhRepository caThucHanhRepository;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -627,6 +630,49 @@ public class PhongMayService {
         writeLog(username, "thongKeMayTinhTheoThoiGian - Statistics generated for " + chartData.size() + " days.");
         return chartData;
     }
+    @Scheduled(fixedRate = 10000) // Chạy mỗi 60 giây (1 phút)
+    public void capNhatTrangThaiPhongMayTheoThoiGianThuc() {
+        LocalDate homNay = LocalDate.now();
+        LocalTime thoiGianHienTai = LocalTime.now();
+        List<PhongMay> tatCaPhongMay = phongMayRepository.findAll();
+
+        for (PhongMay phongMay : tatCaPhongMay) {
+            boolean dangCoTiet = false;
+            List<CaThucHanh> caThucHanhHomNay = caThucHanhRepository.findByNgayThucHanhAndPhongMay(homNay, phongMay);
+
+            if (caThucHanhHomNay != null) {
+                for (CaThucHanh ca : caThucHanhHomNay) {
+                    ThoiGianBieu.KhoangThoiGian khoangThoiGianBatDau = ThoiGianBieu.getKhoangThoiGianTheoTiet(ca.getTietBatDau());
+                    ThoiGianBieu.KhoangThoiGian khoangThoiGianKetThuc = ThoiGianBieu.getKhoangThoiGianTheoTiet(ca.getTietKetThuc());
+
+                    if (khoangThoiGianBatDau != null && khoangThoiGianKetThuc != null) {
+                        if (thoiGianHienTai.isAfter(khoangThoiGianBatDau.getStartTime()) && thoiGianHienTai.isBefore(khoangThoiGianKetThuc.getEndTime())) {
+                            dangCoTiet = true;
+                            break; // Nếu tìm thấy ca đang diễn ra, không cần kiểm tra thêm cho phòng máy này
+                        } else if (thoiGianHienTai.equals(khoangThoiGianBatDau.getStartTime()) || thoiGianHienTai.equals(khoangThoiGianKetThuc.getEndTime())) {
+                            dangCoTiet = true;
+                            break; // Nếu thời gian hiện tại bằng giờ bắt đầu hoặc giờ kết thúc
+                        }
+                    }
+                }
+            }
+
+            if (dangCoTiet) {
+                if (!phongMay.getTrangThai().equals("Đang có tiết")) {
+                    phongMay.setTrangThai("Đang có tiết");
+                    phongMayRepository.save(phongMay);
+                    System.out.println("Phòng máy " + phongMay.getTenPhong() + " chuyển trạng thái: Đang có tiết");
+                }
+            } else {
+                if (!phongMay.getTrangThai().equals("Trống")) {
+                    phongMay.setTrangThai("Trống");
+                    phongMayRepository.save(phongMay);
+                    System.out.println("Phòng máy " + phongMay.getTenPhong() + " chuyển trạng thái: Trống");
+                }
+            }
+        }
+    }
+
 
 
 }
