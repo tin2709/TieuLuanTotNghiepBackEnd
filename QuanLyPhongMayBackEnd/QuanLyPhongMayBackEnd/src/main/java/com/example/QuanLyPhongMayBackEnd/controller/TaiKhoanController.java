@@ -117,7 +117,8 @@ public class TaiKhoanController {
         TaiKhoan savedTaiKhoan = taiKhoanService.luu(taiKhoan); // Get the saved TaiKhoan object
 
         // Send confirmation email after successful registration
-        mailService.sendConfirmationEmail(email);
+        mailService.sendConfirmationEmailAsync(email); // Call the async method
+
 
         return ResponseEntity.ok(savedTaiKhoan); // Return 200 status with the saved TaiKhoan object
     }
