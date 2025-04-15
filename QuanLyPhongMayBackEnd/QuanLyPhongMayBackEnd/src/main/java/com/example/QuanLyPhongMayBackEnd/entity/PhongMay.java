@@ -44,6 +44,19 @@ public class PhongMay {
     @OnDelete(action = OnDeleteAction.CASCADE)
     private List<MayTinh> mayTinhs;
 
+    @Version
+    @Column(name = "version", nullable = false, columnDefinition = "int DEFAULT 0")
+    private Integer version = 0;
+
+    public Integer getVersion() {
+        return version;
+    }
+
+    public void setVersion(Integer version) {
+        this.version = version;
+    }
+
+
     public Long getMaPhong() {
         return maPhong;
     }
@@ -93,7 +106,7 @@ public class PhongMay {
     }
 
     public PhongMay(Long maPhong, String tenPhong, int soMay, String moTa, String trangThai, Tang tang,
-                    List<MayTinh> mayTinhs) {
+                    List<MayTinh> mayTinhs, Integer version) {
         super();
         this.maPhong = maPhong;
         this.tenPhong = tenPhong;
@@ -102,6 +115,7 @@ public class PhongMay {
         this.trangThai = trangThai;
         this.tang = tang;
         this.mayTinhs = mayTinhs;
+        this.version = version;
     }
 
     public PhongMay() {
@@ -112,7 +126,7 @@ public class PhongMay {
     @Override
     public String toString() {
         return "PhongMay [maPhong=" + maPhong + ", tenPhong=" + tenPhong + ", soMay=" + soMay + ", moTa=" + moTa
-                + ", trangThai=" + trangThai + ", tang=" + tang + ", mayTinhs=" + mayTinhs + "]";
+                + ", trangThai=" + trangThai + ", tang=" + tang + ", mayTinhs=" + mayTinhs + ", version=" + version +"]";
     }
 
 }
