@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -12,7 +13,11 @@ public class MailService {
 
     @Autowired
     private JavaMailSender javaMailSender;  // Inject JavaMailSender
-
+    @Async("emailTaskExecutor") // Chỉ định sử dụng Executor có tên "emailTaskExecutor" cho phương thức bất đồng bộ
+    public void sendConfirmationEmailAsync(String recipientEmail) { // Giữ nguyên tên phương thức bất đồng bộ
+        sendConfirmationEmail(recipientEmail); // Gọi phương thức gửi email đồng bộ bên dưới
+        System.out.println("Confirmation email sending task submitted for: " + recipientEmail + " using emailTaskExecutor");
+    }
     // Method to send confirmation email
     public void sendConfirmationEmail(String recipientEmail) {
         try {
