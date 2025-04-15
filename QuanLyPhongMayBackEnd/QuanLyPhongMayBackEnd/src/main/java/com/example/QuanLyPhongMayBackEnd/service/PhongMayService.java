@@ -19,6 +19,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.orm.ObjectOptimisticLockingFailureException; // Correct Import Here
 
 import java.io.*;
 import java.text.SimpleDateFormat;
@@ -346,7 +347,7 @@ public class PhongMayService {
         }
     }
 
-    public PhongMay luu(PhongMay phongMay, String token) {
+    public PhongMay luu(PhongMay phongMay, String token) { // PhongMayService.luu
         String username = null;
         try {
             username = jwtUtil.getUsernameFromToken(token);
@@ -364,12 +365,12 @@ public class PhongMayService {
             return savedPhongMay;
         } catch (Exception e) {
             writeLog(username, "luu - Error saving room: " + e.getMessage());
-            throw new RuntimeException("Room creation failed. Database error.", e); // More specific exception
+            throw new RuntimeException("Room creation failed. Database error.", e);
         }
     }
 
 
-    public PhongMay capNhatTheoMa(Long maPhong, String tenPhong, int soMay, String moTa, String trangThai, Long maTang, String token) {
+    public PhongMay capNhatTheoMa(Long maPhong, String tenPhong, int soMay, String moTa, String trangThai, Long maTang, Integer version, String token) {
         String username = null;
         try {
             username = jwtUtil.getUsernameFromToken(token);
@@ -385,6 +386,13 @@ public class PhongMayService {
         Optional<PhongMay> phongMayDB = phongMayRepository.findById(maPhong);
         if (phongMayDB.isPresent()) {
             PhongMay phongMayCu = phongMayDB.get();
+
+            // Optimistic Locking Check - Now using ObjectOptimisticLockingFailureException
+            if (!phongMayCu.getVersion().equals(version)) {
+                writeLog(username, "capNhatTheoMa - Optimistic Lock Exception: Version mismatch. maPhong: " + maPhong + ", DB Version: " + phongMayCu.getVersion() + ", Request Version: " + version);
+                throw new IllegalStateException("Concurrent update detected. Please refresh and try again.");
+
+            }
 
             phongMayCu.setTenPhong(tenPhong);
             phongMayCu.setSoMay(soMay);
@@ -410,7 +418,6 @@ public class PhongMayService {
         writeLog(username, "capNhatTheoMa - Room not found. maPhong: " + maPhong);
         return null; // Or throw an exception - MUCH better practice
     }
-
 
     public List<PhongMay> layPhongMayTheoMaTang(Long maTang, String token) {
         String username = null;
@@ -630,7 +637,8 @@ public class PhongMayService {
         writeLog(username, "thongKeMayTinhTheoThoiGian - Statistics generated for " + chartData.size() + " days.");
         return chartData;
     }
-    @Scheduled(fixedRate = 10000) // Chạy mỗi 60 giây (1 phút)
+    @Scheduled(fixedRate = 10000) // Chạy mỗi 10 giây (for testing, change back to 60000 for 1 minute)
+    @Transactional // Add Transactional for EntityManager operations
     public void capNhatTrangThaiPhongMayTheoThoiGianThuc() {
         LocalDate homNay = LocalDate.now();
         LocalTime thoiGianHienTai = LocalTime.now();
@@ -648,27 +656,32 @@ public class PhongMayService {
                     if (khoangThoiGianBatDau != null && khoangThoiGianKetThuc != null) {
                         if (thoiGianHienTai.isAfter(khoangThoiGianBatDau.getStartTime()) && thoiGianHienTai.isBefore(khoangThoiGianKetThuc.getEndTime())) {
                             dangCoTiet = true;
-                            break; // Nếu tìm thấy ca đang diễn ra, không cần kiểm tra thêm cho phòng máy này
+                            break;
                         } else if (thoiGianHienTai.equals(khoangThoiGianBatDau.getStartTime()) || thoiGianHienTai.equals(khoangThoiGianKetThuc.getEndTime())) {
                             dangCoTiet = true;
-                            break; // Nếu thời gian hiện tại bằng giờ bắt đầu hoặc giờ kết thúc
+                            break;
                         }
                     }
                 }
             }
 
+            String trangThaiMoi;
             if (dangCoTiet) {
-                if (!phongMay.getTrangThai().equals("Đang có tiết")) {
-                    phongMay.setTrangThai("Đang có tiết");
-                    phongMayRepository.save(phongMay);
-                    System.out.println("Phòng máy " + phongMay.getTenPhong() + " chuyển trạng thái: Đang có tiết");
-                }
+                trangThaiMoi = "Đang có tiết";
             } else {
-                if (!phongMay.getTrangThai().equals("Trống")) {
-                    phongMay.setTrangThai("Trống");
-                    phongMayRepository.save(phongMay);
-                    System.out.println("Phòng máy " + phongMay.getTenPhong() + " chuyển trạng thái: Trống");
-                }
+                trangThaiMoi = "Trống";
+            }
+
+            if (!phongMay.getTrangThai().equals(trangThaiMoi)) {
+                String tenPhong = phongMay.getTenPhong(); // Get tenPhong for logging
+
+                // Direct database update using JPQL to avoid version increment
+                entityManager.createQuery("UPDATE PhongMay pm SET pm.trangThai = :trangThaiMoi WHERE pm.maPhong = :maPhong")
+                        .setParameter("trangThaiMoi", trangThaiMoi)
+                        .setParameter("maPhong", phongMay.getMaPhong())
+                        .executeUpdate();
+
+                System.out.println("Phòng máy " + tenPhong + " chuyển trạng thái: " + trangThaiMoi + " (No Version Increment)");
             }
         }
     }

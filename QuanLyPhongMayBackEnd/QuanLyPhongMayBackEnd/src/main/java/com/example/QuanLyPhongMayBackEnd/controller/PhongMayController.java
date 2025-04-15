@@ -11,6 +11,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -36,7 +37,7 @@ public class PhongMayController {
     @Autowired
     private JwtUtil jwtUtil;
 
-    @PostMapping("/LuuPhongMay")
+    @PostMapping("/LuuPhongMay") // PhongMayController.luu
     public PhongMay luu(
             @RequestParam String tenPhong,
             @RequestParam int soMay,
@@ -45,20 +46,23 @@ public class PhongMayController {
             @RequestParam Long maTang,
             @RequestParam String token) {
 
-        // Create a PhongMay object from the request parameters
+
         PhongMay phongMay = new PhongMay();
         phongMay.setTenPhong(tenPhong);
         phongMay.setSoMay(soMay);
         phongMay.setMoTa(moTa);
         phongMay.setTrangThai(trangThai);
 
-        // Assuming the Tang entity is being set based on maTang (you may need a TangService to fetch Tang)
-        Tang tang = new Tang();  // This would need to be retrieved from the Tang entity based on maTang
-        tang.setMaTang(maTang);  // Assuming Tang has a setMaTang method
+
+        Tang tang = tangService.layTangTheoMa(maTang, token);
+        if (tang == null) {
+            return null;
+        }
         phongMay.setTang(tang);
 
         return phongMayService.luu(phongMay,token);
     }
+
 
     @GetMapping("/DSPhongMay")
     public List<PhongMay> layDSPhongMay(@RequestParam String token) {
@@ -97,13 +101,14 @@ public class PhongMayController {
 
 
     @PostMapping("/CapNhatPhongMay")
-    public ResponseEntity<PhongMay> capNhatTheoMa(
+    public ResponseEntity<?> capNhatTheoMa(
             @RequestParam Long maPhong,
             @RequestParam String tenPhong,
             @RequestParam int soMay,
             @RequestParam String moTa,
             @RequestParam String trangThai,
             @RequestParam Long maTang,
+            @RequestParam Integer version, // Add version parameter
             @RequestParam String token) {
 
         if (!phongMayService.isUserLoggedIn(token)) {
@@ -111,12 +116,17 @@ public class PhongMayController {
         }
 
         try {
-            PhongMay updatedPhongMay = phongMayService.capNhatTheoMa(maPhong, tenPhong, soMay, moTa, trangThai, maTang, token);
+            PhongMay updatedPhongMay = phongMayService.capNhatTheoMa(maPhong, tenPhong, soMay, moTa, trangThai, maTang, version, token);
             if (updatedPhongMay == null) {
                 return new ResponseEntity<>(HttpStatus.NOT_FOUND);
             }
             return new ResponseEntity<>(updatedPhongMay, HttpStatus.OK);
-        } catch (Exception e) {
+        } catch (IllegalStateException e) { // Catch IllegalStateException
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage()); // Get the exception message
+            return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT); // Return 409 Conflict
+        }
+        catch (Exception e) {
             // Log the exception
             e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
