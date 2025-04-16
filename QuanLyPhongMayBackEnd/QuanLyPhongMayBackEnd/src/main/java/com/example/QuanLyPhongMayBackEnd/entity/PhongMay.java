@@ -1,4 +1,5 @@
 package com.example.QuanLyPhongMayBackEnd.entity;
+
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import org.hibernate.annotations.OnDelete;
@@ -7,13 +8,14 @@ import org.hibernate.annotations.OnDeleteAction;
 import java.util.List;
 
 @Entity
-@Table(name="phong_may")
+@Table(name="phong_may",
+        uniqueConstraints = {@UniqueConstraint(columnNames = {"tenPhong", "maTang"})}) // Sửa đổi UniqueConstraint ở đây
 public class PhongMay {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ma_phong")
     private Long maPhong;
-    @Column(name="ten_phong")
+    @Column(name="ten_phong", nullable = false)
     private String tenPhong;
     @Column(name = "so_may",columnDefinition = "int CHECK (so_may >= 0)", nullable = false)
     private int soMay;
@@ -125,7 +127,7 @@ public class PhongMay {
 
     @Override
     public String toString() {
-        return "PhongMay [maPhong=" + maPhong + ", tenPhong=" + tenPhong + ", soMay=" + soMay + ", moTa=" + moTa
+        return "PhongMay [maPhong=" + maPhong + ", tenPhong=" + tenPhong + ", soMay=" + soMay + ", Mo ta=" + moTa
                 + ", trangThai=" + trangThai + ", tang=" + tang + ", mayTinhs=" + mayTinhs + ", version=" + version +"]";
     }
 
