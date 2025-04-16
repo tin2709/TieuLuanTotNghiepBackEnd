@@ -16,9 +16,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @CrossOrigin
@@ -36,16 +35,35 @@ public class PhongMayController {
     private MayTinhService mayTinhService;
     @Autowired
     private JwtUtil jwtUtil;
+    private static final Set<String> usedTokens = new HashSet<>();
+    private static final long TOKEN_EXPIRY_TIME_MS = TimeUnit.MINUTES.toMillis(1);
 
-    @PostMapping("/LuuPhongMay") // PhongMayController.luu
-    public PhongMay luu(
+    @GetMapping("/request-token")
+    public ResponseEntity<String> getRequestToken() {
+        String token = UUID.randomUUID().toString();
+        return ResponseEntity.ok(token);
+    }
+    @PostMapping("/LuuPhongMay") // Giữ nguyên endpoint và RequestParam cũ, thêm requestToken
+    public ResponseEntity<?> luu(
             @RequestParam String tenPhong,
             @RequestParam int soMay,
             @RequestParam String moTa,
             @RequestParam String trangThai,
             @RequestParam Long maTang,
-            @RequestParam String token) {
+            @RequestParam String token, // Token JWT vẫn giữ nguyên
+            @RequestParam("requestToken") String requestToken // Thêm requestToken như RequestParam
+    ) {
 
+        if (usedTokens.contains(requestToken)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Yêu cầu trùng lặp. Vui lòng chờ một khoảng thời gian trước khi thử lại.");
+        }
+
+        synchronized (usedTokens) {
+            if (usedTokens.contains(requestToken)) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body("Yêu cầu trùng lặp. Vui lòng chờ một khoảng thời gian trước khi thử lại.");
+            }
+            usedTokens.add(requestToken);
+        }
 
         PhongMay phongMay = new PhongMay();
         phongMay.setTenPhong(tenPhong);
@@ -53,14 +71,39 @@ public class PhongMayController {
         phongMay.setMoTa(moTa);
         phongMay.setTrangThai(trangThai);
 
-
-        Tang tang = tangService.layTangTheoMa(maTang, token);
+        Tang tang = tangService.layTangTheoMa(maTang, token); // Sử dụng token JWT để xác thực
         if (tang == null) {
-            return null;
+            return ResponseEntity.badRequest().body("Không tìm thấy tầng với mã " + maTang);
         }
         phongMay.setTang(tang);
 
-        return phongMayService.luu(phongMay,token);
+        try {
+            PhongMay savedPhongMay = phongMayService.luu(phongMay, token, requestToken); // Truyền requestToken vào service
+            return ResponseEntity.ok(savedPhongMay);
+        } catch (PhongMayService.DuplicateRequestException e) {
+            synchronized (usedTokens) {
+                usedTokens.remove(requestToken);
+            }
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Yêu cầu trùng lặp. Vui lòng chờ một khoảng thời gian trước khi thử lại.");
+        }
+        catch (Exception e) {
+            synchronized (usedTokens) {
+                usedTokens.remove(requestToken);
+            }
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi server: " + e.getMessage() + ". Vui lòng thử lại sau.");
+        } finally {
+            new java.util.Timer().schedule(
+                    new java.util.TimerTask() {
+                        @Override
+                        public void run() {
+                            synchronized (usedTokens) {
+                                usedTokens.remove(requestToken);
+                            }
+                        }
+                    },
+                    TOKEN_EXPIRY_TIME_MS
+            );
+        }
     }
 
 

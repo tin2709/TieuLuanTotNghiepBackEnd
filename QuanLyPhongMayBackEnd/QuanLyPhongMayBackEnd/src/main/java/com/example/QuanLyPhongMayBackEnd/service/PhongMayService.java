@@ -11,9 +11,11 @@ import com.example.QuanLyPhongMayBackEnd.repository.TangRepository;
 import com.example.QuanLyPhongMayBackEnd.security.JwtUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.PersistenceException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -347,7 +349,7 @@ public class PhongMayService {
         }
     }
 
-    public PhongMay luu(PhongMay phongMay, String token) { // PhongMayService.luu
+    public PhongMay luu(PhongMay phongMay, String token, String requestToken) { // Method signature vẫn giữ nguyên
         String username = null;
         try {
             username = jwtUtil.getUsernameFromToken(token);
@@ -361,13 +363,29 @@ public class PhongMayService {
         }
         try {
             PhongMay savedPhongMay = phongMayRepository.save(phongMay);
-            writeLog(username, "luu - Success. Room saved: " + savedPhongMay.getMaPhong());
+            writeLog(username, "luu - Success. Room saved: " + savedPhongMay.getMaPhong() + ", Request Token (không dùng nữa): " + requestToken); // Cập nhật log
             return savedPhongMay;
-        } catch (Exception e) {
-            writeLog(username, "luu - Error saving room: " + e.getMessage());
-            throw new RuntimeException("Room creation failed. Database error.", e);
+        } catch (DataIntegrityViolationException e) {
+            writeLog(username, "luu - Error saving room (duplicate entry - tenPhong & maTang): " + e.getMessage() + ", Request Token (không dùng nữa): " + requestToken); // Cập nhật log
+            throw new DuplicateRequestException("Phòng máy với tên và tầng này đã tồn tại. Vui lòng kiểm tra lại.", e); // Thông báo lỗi cụ thể hơn
+        }
+        catch (PersistenceException e) {
+            writeLog(username, "luu - Persistence error saving room: " + e.getMessage() + ", Request Token (không dùng nữa): " + requestToken); // Cập nhật log
+            throw new RuntimeException("Lỗi khi lưu phòng máy vào database.", e);
+        }
+        catch (Exception e) {
+            writeLog(username, "luu - Error saving room: " + e.getMessage() + ", Request Token (không dùng nữa): " + requestToken); // Cập nhật log
+            throw new RuntimeException("Lỗi tạo phòng máy không xác định.", e);
         }
     }
+
+
+    public static class DuplicateRequestException extends RuntimeException {
+        public DuplicateRequestException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
 
 
     public PhongMay capNhatTheoMa(Long maPhong, String tenPhong, int soMay, String moTa, String trangThai, Long maTang, Integer version, String token) {
