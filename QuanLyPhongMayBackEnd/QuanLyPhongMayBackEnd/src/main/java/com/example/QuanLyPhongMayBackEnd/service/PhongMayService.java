@@ -562,6 +562,62 @@ public class PhongMayService {
             throw new IOException("Có lỗi xảy ra trong quá trình import: " + e.getMessage(), e); // Include original exception
         }
     }
+    public List<QRDTO> layDanhSachPhongMayVaThongKe_BeforeFetchJoin(String token) { // Đổi tên phương thức để phân biệt
+        String username = null;
+        long startTime = System.currentTimeMillis(); // Ghi lại thời điểm bắt đầu
+
+        try {
+            username = jwtUtil.getUsernameFromToken(token);
+        } catch (Exception e) {
+            writeLog(null, "layDanhSachPhongMayVaThongKe - Error getting username from token: " + e.getMessage());
+        }
+
+        if (!isUserLoggedIn(token)) {
+            writeLog(username, "layDanhSachPhongMayVaThongKe - User not logged in.");
+            return null;
+        }
+        try {
+            List<PhongMay> danhSachPhongMay = phongMayRepository.findAll(); // Vẫn sử dụng findAll() - gây ra N+1 Select
+            List<QRDTO> result = danhSachPhongMay.stream().map(phongMay -> {
+                List<MayTinh> mayDangHoatDong = phongMay.getMayTinhs().stream() // Vẫn gây ra truy vấn N+1 ở đây
+                        .filter(mayTinh -> "Đang hoạt động".equals(mayTinh.getTrangThai()))
+                        .collect(Collectors.toList());
+
+                List<MayTinh> mayDaHong = phongMay.getMayTinhs().stream() // Vẫn gây ra truy vấn N+1 ở đây
+                        .filter(mayTinh -> "Đã hỏng".equals(mayTinh.getTrangThai()))
+                        .collect(Collectors.toList());
+
+                List<MayTinhDTO> mayDangHoatDongDTO = mayDangHoatDong.stream()
+                        .map(mayTinh -> new MayTinhDTO(mayTinh.getMaMay(), mayTinh.getTenMay(), mayTinh.getTrangThai(), mayTinh.getMoTa()))
+                        .collect(Collectors.toList());
+
+                List<MayTinhDTO> mayDaHongDTO = mayDaHong.stream()
+                        .map(mayTinh -> new MayTinhDTO(mayTinh.getMaMay(), mayTinh.getTenMay(), mayTinh.getTrangThai(), mayTinh.getMoTa()))
+                        .collect(Collectors.toList());
+
+                return new QRDTO(
+                        phongMay.getTenPhong(),
+                        mayDangHoatDong.size(),
+                        mayDaHong.size(),
+                        mayDangHoatDongDTO,
+                        mayDaHongDTO
+                );
+            }).collect(Collectors.toList());
+
+            long endTime = System.currentTimeMillis(); // Ghi lại thời điểm kết thúc
+            long executionTime = endTime - startTime; // Tính thời gian thực thi
+
+            writeLog(username, "layDanhSachPhongMayVaThongKe_BeforeFetchJoin - Success. Result size: " + result.size() + ", Thời gian thực thi: " + executionTime + "ms");
+            System.out.println("layDanhSachPhongMayVaThongKe_BeforeFetchJoin - Thời gian thực thi: " + executionTime + "ms"); // In ra console để dễ theo dõi
+            return result;
+        } catch (Exception e){
+            long endTime = System.currentTimeMillis(); // Ghi lại thời điểm kết thúc ngay cả khi có lỗi
+            long executionTime = endTime - startTime; // Tính thời gian thực thi
+            writeLog(username, "layDanhSachPhongMayVaThongKe_BeforeFetchJoin - Error: " + e.getMessage() + ", Thời gian thực thi: " + executionTime + "ms");
+            System.out.println("layDanhSachPhongMayVaThongKe_BeforeFetchJoin - Error: " + e.getMessage() + ", Thời gian thực thi: " + executionTime + "ms");
+            throw e;
+        }
+    }
 
     public List<QRDTO> layDanhSachPhongMayVaThongKe(String token) {
         String username = null;
@@ -576,7 +632,8 @@ public class PhongMayService {
             return null;
         }
         try {
-            List<PhongMay> danhSachPhongMay = phongMayRepository.findAll();
+            // Sử dụng phương thức mới findAllPhongMayWithMayTinhs() để fetch join
+            List<PhongMay> danhSachPhongMay = phongMayRepository.findAllPhongMayWithMayTinhs();
             List<QRDTO> result = danhSachPhongMay.stream().map(phongMay -> {
                 List<MayTinh> mayDangHoatDong = phongMay.getMayTinhs().stream()
                         .filter(mayTinh -> "Đang hoạt động".equals(mayTinh.getTrangThai()))
