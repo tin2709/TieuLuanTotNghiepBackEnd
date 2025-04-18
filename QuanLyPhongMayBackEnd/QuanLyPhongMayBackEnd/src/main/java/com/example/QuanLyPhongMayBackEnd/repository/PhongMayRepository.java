@@ -13,7 +13,11 @@ public interface PhongMayRepository extends JpaRepository<PhongMay, Long>, JpaSp
     public List<PhongMay> findByTrangThai(String trangThai);
 
     public List<PhongMay> findByTang_MaTang(Long maTang);
-    // Phương thức mới sử dụng FETCH JOIN để tải trước mayTinhs
+    // Phương thức mới sử dụng FETCH JOIN để tải trước mayTinhs (Keep this if you need it elsewhere)
     @Query("SELECT pm FROM PhongMay pm LEFT JOIN FETCH pm.mayTinhs")
     List<PhongMay> findAllPhongMayWithMayTinhs();
+
+    // Corrected query: Fetch PhongMay only, let mayTinhs and thietBis load lazily
+    @Query("SELECT pm FROM PhongMay pm")
+    List<PhongMay> findAllPhongMayWithMayTinhsAndThietBis(); // REMOVE JOIN FETCH HERE
 }
