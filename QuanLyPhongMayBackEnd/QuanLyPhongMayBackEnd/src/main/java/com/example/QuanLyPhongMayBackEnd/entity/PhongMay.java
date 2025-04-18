@@ -46,6 +46,33 @@ public class PhongMay {
     @OnDelete(action = OnDeleteAction.CASCADE)
     private List<MayTinh> mayTinhs;
 
+    // New field: soThietBi
+    @Column(name = "so_thiet_bi", columnDefinition = "int CHECK (so_thiet_bi >= 0)", nullable = false)
+    private int soThietBi;
+
+    // New field: thietBis
+    @OneToMany(mappedBy = "phongMay", cascade = CascadeType.ALL)
+    @JsonManagedReference // Corrected annotation
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    private List<ThietBi> thietBis;
+
+    public List<ThietBi> getThietBis() {
+        return thietBis;
+    }
+
+    public void setThietBis(List<ThietBi> thietBis) {
+        this.thietBis = thietBis;
+    }
+
+    public int getSoThietBi() {
+        return soThietBi;
+    }
+
+    public void setSoThietBi(int soThietBi) {
+        this.soThietBi = soThietBi;
+    }
+
+
     @Version
     @Column(name = "version", nullable = false, columnDefinition = "int DEFAULT 0")
     private Integer version = 0;
@@ -108,7 +135,7 @@ public class PhongMay {
     }
 
     public PhongMay(Long maPhong, String tenPhong, int soMay, String moTa, String trangThai, Tang tang,
-                    List<MayTinh> mayTinhs, Integer version) {
+                    List<MayTinh> mayTinhs, Integer version, int soThietBi, List<ThietBi> thietBis) {
         super();
         this.maPhong = maPhong;
         this.tenPhong = tenPhong;
@@ -118,6 +145,8 @@ public class PhongMay {
         this.tang = tang;
         this.mayTinhs = mayTinhs;
         this.version = version;
+        this.soThietBi = soThietBi;
+        this.thietBis = thietBis;
     }
 
     public PhongMay() {
@@ -128,7 +157,7 @@ public class PhongMay {
     @Override
     public String toString() {
         return "PhongMay [maPhong=" + maPhong + ", tenPhong=" + tenPhong + ", soMay=" + soMay + ", Mo ta=" + moTa
-                + ", trangThai=" + trangThai + ", tang=" + tang + ", mayTinhs=" + mayTinhs + ", version=" + version +"]";
+                + ", trangThai=" + trangThai + ", tang=" + tang + ", mayTinhs=" + mayTinhs + ", version=" + version + ", soThietBi=" + soThietBi + ", thietBis=" + thietBis + "]";
     }
 
 }

@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/QuanLyPhongMayBackEnd/QuanLyPhongMayBackEnd/QuanLyPhongMayBackEnd.iml" filepath="$PROJECT_DIR$/QuanLyPhongMayBackEnd/QuanLyPhongMayBackEnd/QuanLyPhongMayBackEnd.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/TieuLuanTotNghiepBackEnd.iml" filepath="$PROJECT_DIR$/.idea/TieuLuanTotNghiepBackEnd.iml" />
     </modules>
   </component>
