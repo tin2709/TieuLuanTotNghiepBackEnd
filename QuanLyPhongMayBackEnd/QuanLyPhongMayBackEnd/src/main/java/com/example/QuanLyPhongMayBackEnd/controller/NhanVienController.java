@@ -93,4 +93,29 @@ public class NhanVienController {
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+    @GetMapping("/searchNhanVienByAdmin")
+    public ResponseEntity<Map<String, Object>> searchNhanVienByAdmin(@RequestParam String keyword, @RequestParam String token) {
+        // Assuming nhanVienService.isUserLoggedIn(token) exists, or adjust authentication logic as needed
+        if (!nhanVienService.isUserLoggedIn(token)) {
+            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        }
+
+        // Validate the keyword
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+
+        // Perform the search
+        List<NhanVienDTO> results = nhanVienService.timKiemNhanVienByAdmin(keyword, token);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("results", results);
+        response.put("size", results.size());
+
+        if (results == null || results.isEmpty()) {
+            return new ResponseEntity<>(response, HttpStatus.NO_CONTENT);
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 }

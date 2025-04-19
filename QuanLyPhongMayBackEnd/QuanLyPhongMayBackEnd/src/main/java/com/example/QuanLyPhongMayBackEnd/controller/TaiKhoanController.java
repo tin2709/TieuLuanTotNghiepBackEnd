@@ -5,6 +5,7 @@ import com.example.QuanLyPhongMayBackEnd.entity.Quyen;
 import com.example.QuanLyPhongMayBackEnd.entity.RefreshToken;
 import com.example.QuanLyPhongMayBackEnd.entity.TaiKhoan;
 import com.example.QuanLyPhongMayBackEnd.entity.Token;
+import com.example.QuanLyPhongMayBackEnd.repository.QuyenRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.TaiKhoanRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.TokenRepository;
 import com.example.QuanLyPhongMayBackEnd.security.JwtUtil;
@@ -41,7 +42,8 @@ import static com.example.QuanLyPhongMayBackEnd.service.TaiKhoanService.MAX_FAIL
 public class TaiKhoanController {
     @Value("${upload-dir}")
     private String uploadDir;
-
+    @Autowired
+    private QuyenRepository quyenRepository;
     @Autowired
     private PasswordEncoder passwordEncoder; // Được tự động tạo ra bởi Spring Security
 
@@ -229,8 +231,7 @@ public class TaiKhoanController {
 
 
     @GetMapping("/checkUser")
-    public ResponseEntity<Map<String, Object>> checkUser(@RequestParam String username,
-                                                         @RequestParam String password) {
+    public ResponseEntity<Map<String, Object>> checkUser(@RequestParam String username) {
         Map<String, Object> response = new HashMap<>();
 
         // Tìm tài khoản trong cơ sở dữ liệu dựa vào tên đăng nhập
@@ -240,7 +241,7 @@ public class TaiKhoanController {
             TaiKhoan taiKhoan = taiKhoanOptional.get();
 
             // Kiểm tra nếu mật khẩu đã mã hóa đúng
-            if (passwordEncoder.matches(password, taiKhoan.getMatKhau())) {
+
 
                 response.put("status", "success");
                 response.put("message", "User found");
@@ -257,11 +258,7 @@ public class TaiKhoanController {
                 response.put("status", "error");
                 response.put("message", "Invalid username or password");
             }
-        } else {
-            // Tài khoản không tồn tại
-            response.put("status", "error");
-            response.put("message", "User not found");
-        }
+
 
         return new ResponseEntity<>(response, response.get("status").equals("success") ? HttpStatus.OK : HttpStatus.BAD_REQUEST);
     }
@@ -397,7 +394,7 @@ public class TaiKhoanController {
 
         // Kiểm tra xem người dùng có quyền admin không
         TaiKhoan taiKhoan = taiKhoanRepository.findById(String.valueOf(maTK)).orElse(null);
-        if (taiKhoan == null || taiKhoan.getQuyen().getMaQuyen() != 5) {  // Kiểm tra quyền của người dùng
+        if (taiKhoan == null || taiKhoan.getQuyen().getMaQuyen() != 1) {  // Kiểm tra quyền của người dùng
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
                     "status", "error",
                     "message", "Chỉ có admin mới có quyền"
@@ -441,7 +438,7 @@ public class TaiKhoanController {
 
         // Kiểm tra xem người dùng có quyền admin không
         TaiKhoan taiKhoan = taiKhoanRepository.findById(String.valueOf(maTK)).orElse(null);
-        if (taiKhoan == null || taiKhoan.getQuyen().getMaQuyen() != 5) {  // Kiểm tra quyền của người dùng
+        if (taiKhoan == null || taiKhoan.getQuyen().getMaQuyen() != 1) {  // Kiểm tra quyền của người dùng
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
                     "status", "error",
                     "message", "Chỉ có admin mới có quyền"
@@ -489,53 +486,68 @@ public class TaiKhoanController {
     }
     @PutMapping("/CapNhatTaiKhoan") // Use PUT for updates
     public ResponseEntity<?> capNhatTaiKhoan(
-            @RequestParam Long maTK, // Get maTK from a Request Param.  This is less RESTful.
-            @RequestParam String tenDangNhap,
-            @RequestParam String email,
-            @RequestParam(required = false) String matKhau, // Password is optional (for changes)
+            @RequestParam Long maTK,
+            @RequestParam(required = false) String tenDangNhap, // Make RequestParams optional
+            @RequestParam(required = false) String email,      // Make RequestParams optional
+            @RequestParam(required = false) String matKhau,
             @RequestParam(required = false) MultipartFile imageFile,
-            @RequestParam String maQuyen,
-            @RequestParam String token  // You'll likely need the token for authorization
+            @RequestParam(required = false) String maQuyen,     // Make RequestParams optional
+            @RequestParam String token
     ) {
 
         if (!mayTinhService.isUserLoggedIn(token)) {
             return new ResponseEntity<>("Invalid Token", HttpStatus.UNAUTHORIZED);
         }
 
-
         try {
             // Fetch existing user
-            Optional<TaiKhoan> existingUserOptional = taiKhoanRepository.findById(String.valueOf(maTK)); // Use findById from service.  Convert maTK to String.
+            Optional<TaiKhoan> existingUserOptional = taiKhoanRepository.findById(String.valueOf(maTK));
             if (!existingUserOptional.isPresent()) {
                 return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
             }
             TaiKhoan existingUser = existingUserOptional.get();
 
+            // **Full Replacement Logic:**
+            // Set all fields to default values (null or empty strings) initially
+            existingUser.setTenDangNhap(null); // Or "" if you prefer empty string
+            existingUser.setEmail(null);       // Or "" if you prefer empty string
+            existingUser.setMatKhau(null);      // Or "" if you prefer empty string (but might be better to keep old password if not provided)
+            existingUser.setImage(null);        // Or "" if you prefer empty string
+            existingUser.setQuyen(null);         // Set Quyen to null initially
 
-            // Update fields.  Only update if provided.
-            existingUser.setTenDangNhap(tenDangNhap);
-            existingUser.setEmail(email);
-
-            // Handle Password Update *Separately*
+            // Now, update with provided values from request if they exist
+            if (tenDangNhap != null) {
+                existingUser.setTenDangNhap(tenDangNhap);
+            }
+            if (email != null) {
+                existingUser.setEmail(email);
+            }
             if (matKhau != null && !matKhau.isEmpty()) {
                 String encodedPassword = passwordEncoder.encode(matKhau);
                 existingUser.setMatKhau(encodedPassword);
             }
-            // Map 'quyen' to 'Quyen' object
-            Quyen quyen = new Quyen(maQuyen);
-            existingUser.setQuyen(quyen);
-            // Handle Image Update (Optional)
+            if (maQuyen != null) {
+                Optional<Quyen> quyenOptional = quyenRepository.findById(Long.valueOf(maQuyen));
+                if (quyenOptional.isPresent()) {
+                    Quyen quyen = quyenOptional.get();
+                    existingUser.setQuyen(quyen);
+                } else {
+                    return new ResponseEntity<>("Quyen not found", HttpStatus.BAD_REQUEST);
+                }
+            }
             if (imageFile != null && !imageFile.isEmpty()) {
-                String imageUrl = uploadImageFile.uploadImage(imageFile);  //Use your file upload service
+                String imageUrl = uploadImageFile.uploadImage(imageFile);
                 existingUser.setImage(imageUrl);
+            } else if (imageFile == null) {
+                existingUser.setImage(null); // Or "" if you prefer empty string, and handle null in uploadImageFile
             }
 
-            TaiKhoan updatedTaiKhoan = taiKhoanService.luu(existingUser); // Reuse your existing 'luu' method.
+
+            TaiKhoan updatedTaiKhoan = taiKhoanService.luu(existingUser);
             return new ResponseEntity<>(updatedTaiKhoan, HttpStatus.OK);
 
         } catch (Exception e) {
             Sentry.captureException(e);
-            // Log the exception (using a logger like SLF4J is best practice)
             e.printStackTrace();
             return new ResponseEntity<>("Error updating user: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -563,8 +575,8 @@ public class TaiKhoanController {
             return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         }
 
-        // 4. *** KIỂM TRA KHÔNG AN TOÀN: Kiểm tra maTK gửi lên ***
-        try {
+        // 4. *** KIỂM TRA KHÔNG AN TOÀN: Kiểm tra maTK gửi lên *** - **ĐÃ LOẠI BỎ (Như khuyến nghị)**
+        /*try {
             Long requestMaTkLong = Long.parseLong(maTK);
             if (!taiKhoan.getMaTK().equals(requestMaTkLong)) {
                 System.err.println("Lỗi làm mới token: maTK trong request ("+maTK+") không khớp với token.");
@@ -573,7 +585,7 @@ public class TaiKhoanController {
         } catch (NumberFormatException e) {
             System.err.println("Lỗi làm mới token: maTK trong request không phải là số hợp lệ: " + maTK);
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-        }
+        }*/
 
         // 5. Kiểm tra hạn sử dụng của refresh token CŨ
         Optional<RefreshToken> verifiedTokenOpt = refreshTokenService.verifyExpiration(oldToken);
@@ -607,11 +619,16 @@ public class TaiKhoanController {
             taiKhoanService.saveAccessToken(newAccessToken, taiKhoan);
             System.out.println("Đã lưu Access Token mới vào DB với hạn của chính nó.");
 
+            // Lấy thời gian hết hạn từ Access Token mới
+            Date expirationDate = jwtUtil.getExpirationDateFromToken(newAccessToken);
+            Long expiresAtTimestamp = (expirationDate != null) ? expirationDate.getTime() : null; // Chuyển sang milliseconds timestamp
+
 
             // 11. Chuẩn bị Map trả về chứa token mới (Không dùng DTO Response)
             Map<String, String> responseBody = new HashMap<>();
             responseBody.put("token", newAccessToken);
             responseBody.put("refreshToken", newRefreshToken.getToken());
+            responseBody.put("expiresAtTimestamp", String.valueOf(expiresAtTimestamp)); // Thêm expiresAtTimestamp
 
             // 12. Trả về thành công
             return new ResponseEntity<>(responseBody, HttpStatus.OK);
