@@ -674,54 +674,54 @@ public class PhongMayService {
         writeLog(username, "thongKeMayTinhTheoThoiGian - Statistics generated for " + chartData.size() + " days.");
         return chartData;
     }
-    @Scheduled(fixedRate = 10000) // Chạy mỗi 10 giây (for testing, change back to 60000 for 1 minute)
-    @Transactional // Add Transactional for EntityManager operations
-    public void capNhatTrangThaiPhongMayTheoThoiGianThuc() {
-        LocalDate homNay = LocalDate.now();
-        LocalTime thoiGianHienTai = LocalTime.now();
-        List<PhongMay> tatCaPhongMay = phongMayRepository.findAll();
-
-        for (PhongMay phongMay : tatCaPhongMay) {
-            boolean dangCoTiet = false;
-            List<CaThucHanh> caThucHanhHomNay = caThucHanhRepository.findByNgayThucHanhAndPhongMay(homNay, phongMay);
-
-            if (caThucHanhHomNay != null) {
-                for (CaThucHanh ca : caThucHanhHomNay) {
-                    ThoiGianBieu.KhoangThoiGian khoangThoiGianBatDau = ThoiGianBieu.getKhoangThoiGianTheoTiet(ca.getTietBatDau());
-                    ThoiGianBieu.KhoangThoiGian khoangThoiGianKetThuc = ThoiGianBieu.getKhoangThoiGianTheoTiet(ca.getTietKetThuc());
-
-                    if (khoangThoiGianBatDau != null && khoangThoiGianKetThuc != null) {
-                        if (thoiGianHienTai.isAfter(khoangThoiGianBatDau.getStartTime()) && thoiGianHienTai.isBefore(khoangThoiGianKetThuc.getEndTime())) {
-                            dangCoTiet = true;
-                            break;
-                        } else if (thoiGianHienTai.equals(khoangThoiGianBatDau.getStartTime()) || thoiGianHienTai.equals(khoangThoiGianKetThuc.getEndTime())) {
-                            dangCoTiet = true;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            String trangThaiMoi;
-            if (dangCoTiet) {
-                trangThaiMoi = "Đang có tiết";
-            } else {
-                trangThaiMoi = "Trống";
-            }
-
-            if (!phongMay.getTrangThai().equals(trangThaiMoi)) {
-                String tenPhong = phongMay.getTenPhong(); // Get tenPhong for logging
-
-                // Direct database update using JPQL to avoid version increment
-                entityManager.createQuery("UPDATE PhongMay pm SET pm.trangThai = :trangThaiMoi WHERE pm.maPhong = :maPhong")
-                        .setParameter("trangThaiMoi", trangThaiMoi)
-                        .setParameter("maPhong", phongMay.getMaPhong())
-                        .executeUpdate();
-
-                System.out.println("Phòng máy " + tenPhong + " chuyển trạng thái: " + trangThaiMoi + " (No Version Increment)");
-            }
-        }
-    }
+//    @Scheduled(fixedRate = 900000) // Chạy mỗi 10 giây (for testing, change back to 60000 for 1 minute)
+//    @Transactional // Add Transactional for EntityManager operations
+//    public void capNhatTrangThaiPhongMayTheoThoiGianThuc() {
+//        LocalDate homNay = LocalDate.now();
+//        LocalTime thoiGianHienTai = LocalTime.now();
+//        List<PhongMay> tatCaPhongMay = phongMayRepository.findAll();
+//
+//        for (PhongMay phongMay : tatCaPhongMay) {
+//            boolean dangCoTiet = false;
+//            List<CaThucHanh> caThucHanhHomNay = caThucHanhRepository.findByNgayThucHanhAndPhongMay(homNay, phongMay);
+//
+//            if (caThucHanhHomNay != null) {
+//                for (CaThucHanh ca : caThucHanhHomNay) {
+//                    ThoiGianBieu.KhoangThoiGian khoangThoiGianBatDau = ThoiGianBieu.getKhoangThoiGianTheoTiet(ca.getTietBatDau());
+//                    ThoiGianBieu.KhoangThoiGian khoangThoiGianKetThuc = ThoiGianBieu.getKhoangThoiGianTheoTiet(ca.getTietKetThuc());
+//
+//                    if (khoangThoiGianBatDau != null && khoangThoiGianKetThuc != null) {
+//                        if (thoiGianHienTai.isAfter(khoangThoiGianBatDau.getStartTime()) && thoiGianHienTai.isBefore(khoangThoiGianKetThuc.getEndTime())) {
+//                            dangCoTiet = true;
+//                            break;
+//                        } else if (thoiGianHienTai.equals(khoangThoiGianBatDau.getStartTime()) || thoiGianHienTai.equals(khoangThoiGianKetThuc.getEndTime())) {
+//                            dangCoTiet = true;
+//                            break;
+//                        }
+//                    }
+//                }
+//            }
+//
+//            String trangThaiMoi;
+//            if (dangCoTiet) {
+//                trangThaiMoi = "Đang có tiết";
+//            } else {
+//                trangThaiMoi = "Trống";
+//            }
+//
+//            if (!phongMay.getTrangThai().equals(trangThaiMoi)) {
+//                String tenPhong = phongMay.getTenPhong(); // Get tenPhong for logging
+//
+//                // Direct database update using JPQL to avoid version increment
+//                entityManager.createQuery("UPDATE PhongMay pm SET pm.trangThai = :trangThaiMoi WHERE pm.maPhong = :maPhong")
+//                        .setParameter("trangThaiMoi", trangThaiMoi)
+//                        .setParameter("maPhong", phongMay.getMaPhong())
+//                        .executeUpdate();
+//
+//                System.out.println("Phòng máy " + tenPhong + " chuyển trạng thái: " + trangThaiMoi + " (No Version Increment)");
+//            }
+//        }
+//    }
 
 
 

@@ -6,12 +6,14 @@ public class NhanVienDTO {
     private String tenNV;
     private String email;
     private String sDT;
+    private String tenCV; // Added tenCV field
 
-    public NhanVienDTO(Long maNV, String tenNV, String email, String sDT) {
+    public NhanVienDTO(Long maNV, String tenNV, String email, String sDT, String tenCV) {
         this.maNV = maNV;
         this.tenNV = tenNV;
         this.email = email;
         this.sDT = sDT;
+        this.tenCV = tenCV; // Initialize tenCV
     }
 
     // Getters and Setters
@@ -46,5 +48,12 @@ public class NhanVienDTO {
     public void setsDT(String sDT) {
         this.sDT = sDT;
     }
-}
 
+    public String getTenCV() {
+        return tenCV;
+    }
+
+    public void setTenCV(String tenCV) {
+        this.tenCV = tenCV;
+    }
+}
