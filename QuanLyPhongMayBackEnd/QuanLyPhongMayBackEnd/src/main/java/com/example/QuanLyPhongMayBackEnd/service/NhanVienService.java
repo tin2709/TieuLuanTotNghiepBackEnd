@@ -34,12 +34,12 @@ public class NhanVienService {
     public boolean isUserLoggedIn(String token) {
         return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
     }
-    public NhanVien layNVTheoMa(String maNV,String token) {
+    public NhanVien layNVTheoMa(Long maNV,String token) {
         if (!isUserLoggedIn(token)) {
             return null; // Token không hợp lệ
         }
         NhanVien nhanVien = null;
-        Optional<NhanVien> kq = nhanVienRepository.findById(maNV);
+        Optional<NhanVien> kq = nhanVienRepository.findById(String.valueOf(maNV));
         try {
             nhanVien = kq.get();
             return nhanVien;
@@ -296,4 +296,12 @@ public class NhanVienService {
         };
 
     }
+    @Transactional
+    public void xoaNhanVienOnly(String maNV, String token) {
+        if (!isUserLoggedIn(token)) {
+            return; // Token không hợp lệ
+        }
+        nhanVienRepository.deleteById(maNV); // Just delete NhanVien, don't touch TaiKhoan
+    }
+
 }

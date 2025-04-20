@@ -17,6 +17,21 @@ public class Quyen {
         this.maQuyen = Long.valueOf(maQuyen);
     }
 
+    public Quyen(Long maQuyen) {
+        this.maQuyen = maQuyen;
+    }
+
+    public Quyen(Long maQuyen, String tenQuyen) {
+        this.maQuyen = maQuyen;
+        this.tenQuyen = tenQuyen;
+    }
+
+
+    public Quyen() {
+        super();
+        // TODO Auto-generated constructor stub
+    }
+
 
     public Long getMaQuyen() {
         return maQuyen;
@@ -34,16 +49,6 @@ public class Quyen {
         this.tenQuyen = tenQuyen;
     }
 
-    public Quyen(Long maQuyen, String tenQuyen) {
-        super();
-        this.maQuyen = maQuyen;
-        this.tenQuyen = tenQuyen;
-    }
-
-    public Quyen() {
-        super();
-        // TODO Auto-generated constructor stub
-    }
 
     @Override
     public String toString() {
