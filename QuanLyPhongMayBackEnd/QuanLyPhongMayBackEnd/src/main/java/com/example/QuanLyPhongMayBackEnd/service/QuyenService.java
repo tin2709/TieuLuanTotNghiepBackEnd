@@ -2,6 +2,7 @@ package com.example.QuanLyPhongMayBackEnd.service;
 
 
 import java.util.List;
+import java.util.Optional;
 
 import com.example.QuanLyPhongMayBackEnd.entity.Quyen;
 import com.example.QuanLyPhongMayBackEnd.repository.QuyenRepository;
@@ -23,9 +24,21 @@ public class QuyenService {
     // Lấy quyền theo mã
     public Quyen layQuyenTheoMa(Long maQuyen, String token) {
         if (!isUserLoggedIn(token)) {
+            System.out.println("QuyenService - Token không hợp lệ in layQuyenTheoMa"); // Log token invalid
             return null; // Token không hợp lệ
         }
-        return null; // Bạn có thể thêm logic tại đây
+        System.out.println("QuyenService - Tìm kiếm Quyen với maQuyen: " + maQuyen); // Log the maQuyen being searched
+        Optional<Quyen> quyenOptional = quyenRepository.findById(maQuyen);
+
+        if (quyenOptional.isPresent()) {
+            Quyen quyen = quyenOptional.get();
+            System.out.println("QuyenService - Quyen found: " + quyen); // Log if Quyen is found (toString included)
+            System.out.println("QuyenService - Quyen tenQuyen: " + quyen.getTenQuyen()); // Log tenQuyen specifically
+            return quyen;
+        } else {
+            System.out.println("QuyenService - Quyen NOT found for maQuyen: " + maQuyen); // Log if Quyen is NOT found
+            return null;
+        }
     }
 
     // Lấy danh sách quyền
