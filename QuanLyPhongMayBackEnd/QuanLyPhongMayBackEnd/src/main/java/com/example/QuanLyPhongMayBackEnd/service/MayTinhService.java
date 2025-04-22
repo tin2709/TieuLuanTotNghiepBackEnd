@@ -1,12 +1,12 @@
 // MayTinhService.java
 package com.example.QuanLyPhongMayBackEnd.service;
 
+import com.example.QuanLyPhongMayBackEnd.DTO.MayTinhDTO;
 import com.example.QuanLyPhongMayBackEnd.entity.MayTinh;
 import com.example.QuanLyPhongMayBackEnd.entity.PhongMay;
 import com.example.QuanLyPhongMayBackEnd.repository.MayTinhRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.PhongMayRepository;
 import jakarta.persistence.EntityNotFoundException; // Import for exception
-import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict; // For cache invalidation
 import org.springframework.cache.annotation.CachePut;  // For cache update
@@ -14,11 +14,10 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;    // For combining cache operations
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Date; // Import Date
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class MayTinhService {
@@ -34,6 +33,27 @@ public class MayTinhService {
     public boolean isUserLoggedIn(String token) {
         return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
     }
+    @Cacheable(value = "maytinhDTO", key = "#maMay")
+    @Transactional(readOnly = true) // Important for allowing lazy loading during mapping
+    public MayTinhDTO layMayTinhDTOTheoMa(Long maMay, String token) { // Renamed for clarity
+        if (!isUserLoggedIn(token)) {
+            // Handle invalid token - returning null here, controller should handle
+            // Consider throwing an AuthenticationException instead for better handling
+            return null;
+        }
+
+        Optional<MayTinh> mayTinhOptional = mayTinhRepository.findById(maMay);
+
+        if (mayTinhOptional.isPresent()) {
+            MayTinh mayTinhEntity = mayTinhOptional.get();
+            // Map the found entity to DTO
+            return mapToMayTinhDTO(mayTinhEntity);
+        } else {
+            // Entity not found
+            return null;
+        }
+    }
+
 
     // Phương thức lấy máy tính theo mã
     @Cacheable(value = "maytinh", key = "#maMay") // Cache individual MayTinh
@@ -63,12 +83,62 @@ public class MayTinhService {
     }
 
     // Phương thức lấy danh sách tất cả máy tính
-    @Cacheable(value = "maytinhs") // Cache the list of all MayTinh
-    public List<MayTinh> layDSMayTinh(String token) {
+    // Add @Transactional(readOnly = true) for performance optimization on reads
+    @Cacheable(value = "maytinhsDTO") // Consider changing cache name if content differs significantly
+    @Transactional(readOnly = true)
+    public List<MayTinhDTO> layDSMayTinhDTO(String token) { // Renamed method for clarity
         if (!isUserLoggedIn(token)) {
-            return null; // Token không hợp lệ
+            // Depending on requirements, you might throw an exception or return empty list
+            // Returning empty list here for simplicity
+            return Collections.emptyList();
         }
-        return mayTinhRepository.findAll();
+
+        // Fetch entities using the optimized query
+        List<MayTinh> mayTinhEntities = mayTinhRepository.findAllWithPhongMayFetched();
+
+        // Map entities to DTOs
+        if (mayTinhEntities == null || mayTinhEntities.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Using Streams API for mapping
+        return mayTinhEntities.stream()
+                .map(this::mapToMayTinhDTO) // Call helper mapping function
+                .collect(Collectors.toList());
+
+        /* // Alternative: Traditional loop mapping
+        List<MayTinhDTO> dtos = new ArrayList<>();
+        for (MayTinh entity : mayTinhEntities) {
+            dtos.add(mapToMayTinhDTO(entity));
+        }
+        return dtos;
+        */
+    }
+
+    // Helper method to map Entity -> DTO
+    private MayTinhDTO mapToMayTinhDTO(MayTinh entity) {
+        if (entity == null) {
+            return null;
+        }
+        MayTinhDTO dto = new MayTinhDTO();
+        dto.setMaMay(entity.getMaMay());
+        dto.setTenMay(entity.getTenMay());
+        dto.setTrangThai(entity.getTrangThai());
+        dto.setMoTa(entity.getMoTa());
+        dto.setNgayLapDat(entity.getNgayLapDat());
+        dto.setNgayCapNhat(entity.getNgayCapNhat());
+
+        // Safely access PhongMay details (already fetched due to JOIN FETCH)
+        PhongMay phongMay = entity.getPhongMay();
+        if (phongMay != null) {
+            dto.setMaPhong(phongMay.getMaPhong());
+            dto.setTenPhong(phongMay.getTenPhong());
+        } else {
+            // Handle cases where a computer might not be assigned to a room (if possible)
+            dto.setMaPhong(null);
+            dto.setTenPhong(null);
+        }
+        return dto;
     }
 
     // Phương thức xóa máy tính theo mã

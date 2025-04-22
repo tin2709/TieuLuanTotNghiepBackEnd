@@ -38,6 +38,9 @@ public class MayTinh {
     @JoinColumn(name = "ma_phong")
     private PhongMay phongMay;
 
+    public MayTinh(Long maMay) {
+    }
+
     // --- Getters ---
     public Long getMaMay() {
         return maMay;

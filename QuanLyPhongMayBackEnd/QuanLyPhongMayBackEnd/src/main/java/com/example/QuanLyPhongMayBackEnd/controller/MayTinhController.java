@@ -1,6 +1,7 @@
 // MayTinhController.java
 package com.example.QuanLyPhongMayBackEnd.controller;
 
+import com.example.QuanLyPhongMayBackEnd.DTO.MayTinhDTO;
 import com.example.QuanLyPhongMayBackEnd.entity.MayTinh;
 import com.example.QuanLyPhongMayBackEnd.entity.PhongMay;
 import com.example.QuanLyPhongMayBackEnd.service.MayTinhService;
@@ -12,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 // import java.util.Date; // No longer needed for params
@@ -130,10 +130,26 @@ public class MayTinhController {
         return mayTinhService.findByTrangThai(trangThai, token);
     }
     @GetMapping("/DSMayTinh")
-    public List<MayTinh> layDSMayTinh(@RequestParam String token) {
+    public ResponseEntity<List<MayTinhDTO>> layDSMayTinh(@RequestParam String token) {
+        try {
+            // Call the service method that returns DTOs
+            List<MayTinhDTO> mayTinhDTOs = mayTinhService.layDSMayTinhDTO(token);
 
-        System.out.println("Token: " + token);
-        return mayTinhService.layDSMayTinh(token);
+            // Check if the service returned empty list due to invalid token or no data
+            if (mayTinhDTOs.isEmpty()) {
+                // You could check the token validity separately here if needed
+                // to distinguish between "no data" and "unauthorized"
+                // For now, assume empty list means either no data or handled unauthorized case
+                return ResponseEntity.ok(mayTinhDTOs); // Return 200 OK with empty list
+            }
+
+            return ResponseEntity.ok(mayTinhDTOs); // Return 200 OK with the list of DTOs
+        } catch (Exception e) {
+            // Log the exception
+            // logger.error("Error fetching MayTinh list: {}", e.getMessage(), e);
+            // Optionally return an error response object
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build(); // 500 error
+        }
     }
     @DeleteMapping("/XoaMayTinh")
     public ResponseEntity<String> xoa(@RequestParam Long maMay, @RequestParam String token) {
@@ -160,16 +176,23 @@ public class MayTinhController {
             throw new RuntimeException("Có lỗi xảy ra khi xoá các máy tính: " + e.getMessage(), e);
         }
     }
-    @GetMapping("/MayTinh")
-    public ResponseEntity<MayTinh> layMayTinhTheoMa(@RequestParam Long maMay, @RequestParam String token) {
+    @GetMapping("/MayTinh") // Keep endpoint name as requested
+    public ResponseEntity<MayTinhDTO> layMayTinhTheoMa(@RequestParam Long maMay, @RequestParam String token) {
+        // No need for System.out.println in production code
+        // System.out.println("Token: " + token);
 
-        System.out.println("Token: " + token);
+        // Call the service method that returns a DTO
+        MayTinhDTO mayTinhDto = mayTinhService.layMayTinhDTOTheoMa(maMay, token);
 
-        MayTinh mayTinh = mayTinhService.layMayTinhTheoMa(maMay, token);
-        if (mayTinh != null) {
-            return new ResponseEntity<>(mayTinh, HttpStatus.OK);
+        if (mayTinhDto != null) {
+            // If DTO is returned, send 200 OK response with DTO body
+            return new ResponseEntity<>(mayTinhDto, HttpStatus.OK);
+        } else {
+            // If service returns null (either not found or potentially unauthorized)
+            // Return 404 Not Found - Service should ideally throw exceptions
+            // for clearer distinction, but based on current service logic, null means failure.
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
     @PutMapping("/CapNhatTrangThaiNhieuMay")
     public ResponseEntity<Object> capNhatTrangThaiNhieuMay(

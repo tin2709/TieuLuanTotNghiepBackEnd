@@ -1,15 +1,11 @@
 package com.example.QuanLyPhongMayBackEnd.entity;
-import jakarta.persistence.*;
 
-import java.util.Date;
+import jakarta.persistence.*;
+import java.util.Date; // Import java.util.Date
 
 @Entity
 @Table(name = "ghi_chu_may_tinh")
 public class GhiChuMayTinh {
-    public GhiChuMayTinh() {
-        super();
-        // TODO Auto-generated constructor stub
-    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -19,24 +15,53 @@ public class GhiChuMayTinh {
     @Column(name = "noi_dung", columnDefinition = "nvarchar(2500)")
     private String noiDung;
 
-    @ManyToOne
-    @JoinColumn(name = "ma_may")
+    // Relationship to the specific computer
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ma_may") // Foreign key to may_tinh table
     private MayTinh mayTinh;
 
+    // *** New Relationship to the room the computer belongs to ***
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ma_phong", referencedColumnName = "ma_phong") // Foreign key to phong_may table
+    private PhongMay phongMay;
+    // ************************************************************
+
+    @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "ngay_bao_loi")
-    @Temporal(TemporalType.DATE)
     private Date ngayBaoLoi;
 
+    @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "ngay_sua")
-    @Temporal(TemporalType.DATE)
     private Date ngaySua;
 
-    @Column(name = "matk_bao_loi")
-    private String maTKBaoLoi;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "matk_bao_loi", referencedColumnName = "ma_tk") // Foreign key to tai_khoan table
+    private TaiKhoan taiKhoanBaoLoi;
 
-    @Column(name = "matk_sua_loi")
-    private String nguoiSuaLoi;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "matk_sua_loi", referencedColumnName = "ma_tk") // Foreign key to tai_khoan table
+    private TaiKhoan taiKhoanSuaLoi;
 
+    // Default constructor
+    public GhiChuMayTinh() {
+        super();
+    }
+
+    // Updated Constructor with PhongMay
+    public GhiChuMayTinh(Long maGhiChuMT, String noiDung, MayTinh mayTinh, PhongMay phongMay,
+                         Date ngayBaoLoi, Date ngaySua, TaiKhoan taiKhoanBaoLoi, TaiKhoan taiKhoanSuaLoi) {
+        super();
+        this.maGhiChuMT = maGhiChuMT;
+        this.noiDung = noiDung;
+        this.mayTinh = mayTinh;
+        this.phongMay = phongMay; // Assign phongMay
+        this.ngayBaoLoi = ngayBaoLoi;
+        this.ngaySua = ngaySua;
+        this.taiKhoanBaoLoi = taiKhoanBaoLoi;
+        this.taiKhoanSuaLoi = taiKhoanSuaLoi;
+    }
+
+    // Getters and Setters
 
     public Long getMaGhiChuMT() {
         return maGhiChuMT;
@@ -62,6 +87,15 @@ public class GhiChuMayTinh {
         this.mayTinh = mayTinh;
     }
 
+    // Getter and Setter for PhongMay
+    public PhongMay getPhongMay() {
+        return phongMay;
+    }
+
+    public void setPhongMay(PhongMay phongMay) {
+        this.phongMay = phongMay;
+    }
+
     public Date getNgayBaoLoi() {
         return ngayBaoLoi;
     }
@@ -78,42 +112,32 @@ public class GhiChuMayTinh {
         this.ngaySua = ngaySua;
     }
 
-    public String getMaTKBaoLoi() {
-        return maTKBaoLoi;
+    public TaiKhoan getTaiKhoanBaoLoi() {
+        return taiKhoanBaoLoi;
     }
 
-    public void setMaTKBaoLoi(String maTKBaoLoi) {
-        this.maTKBaoLoi = maTKBaoLoi;
+    public void setTaiKhoanBaoLoi(TaiKhoan taiKhoanBaoLoi) {
+        this.taiKhoanBaoLoi = taiKhoanBaoLoi;
     }
 
-    public String getNguoiSuaLoi() {
-        return nguoiSuaLoi;
+    public TaiKhoan getTaiKhoanSuaLoi() {
+        return taiKhoanSuaLoi;
     }
 
-    public void setNguoiSuaLoi(String nguoiSuaLoi) {
-        this.nguoiSuaLoi = nguoiSuaLoi;
-    }
-
-    public GhiChuMayTinh(Long maGhiChuMT, String noiDung, MayTinh mayTinh, Date ngayBaoLoi, Date ngaySua,
-                         String maTKBaoLoi, String nguoiSuaLoi) {
-        super();
-        this.maGhiChuMT = maGhiChuMT;
-        this.noiDung = noiDung;
-        this.mayTinh = mayTinh;
-        this.ngayBaoLoi = ngayBaoLoi;
-        this.ngaySua = ngaySua;
-        this.maTKBaoLoi = maTKBaoLoi;
-        this.nguoiSuaLoi = nguoiSuaLoi;
-
+    public void setTaiKhoanSuaLoi(TaiKhoan taiKhoanSuaLoi) {
+        this.taiKhoanSuaLoi = taiKhoanSuaLoi;
     }
 
     @Override
     public String toString() {
-        return "GhiChuMayTinh [maGhiChuMT=" + maGhiChuMT + ", noiDung=" + noiDung + ", mayTinh=" + mayTinh
-                + ", ngayBaoLoi=" + ngayBaoLoi + ", ngaySua=" + ngaySua + ", maTKBaoLoi=" + maTKBaoLoi
-                + ", nguoiSuaLoi=" + nguoiSuaLoi +  "]";
+        return "GhiChuMayTinh [maGhiChuMT=" + maGhiChuMT
+                + ", noiDung=" + noiDung
+                + ", mayTinh=" + (mayTinh != null ? mayTinh.getMaMay() : "null")
+                + ", phongMay=" + (phongMay != null ? phongMay.getMaPhong() : "null") // Added phongMay
+                + ", ngayBaoLoi=" + ngayBaoLoi
+                + ", ngaySua=" + ngaySua
+                + ", taiKhoanBaoLoi=" + (taiKhoanBaoLoi != null ? taiKhoanBaoLoi.getMaTK() : "null")
+                + ", taiKhoanSuaLoi=" + (taiKhoanSuaLoi != null ? taiKhoanSuaLoi.getMaTK() : "null")
+                + "]";
     }
-
-
-
 }
