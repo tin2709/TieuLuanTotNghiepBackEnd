@@ -315,4 +315,18 @@ public class GiaoVienService {
         };
 
     }
+    @Transactional
+    public void xoaGiaoVienOnly(String maGV, String token) {
+        if (!isUserLoggedIn(token)) {
+            return; // Token không hợp lệ
+        }
+
+        try {
+            Long maGiaoVien = Long.parseLong(maGV);
+            giaoVienRepository.deleteByMaGiaoVien(maGiaoVien);
+        } catch (NumberFormatException e) {
+            // Handle the case where maGV is not a valid Long
+            throw new IllegalArgumentException("Invalid maGV format. Must be a valid number.", e);
+        }
+    }
 }
