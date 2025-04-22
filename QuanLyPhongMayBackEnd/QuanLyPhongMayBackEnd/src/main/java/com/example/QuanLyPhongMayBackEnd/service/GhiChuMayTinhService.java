@@ -1,4 +1,5 @@
 package com.example.QuanLyPhongMayBackEnd.service;
+import com.example.QuanLyPhongMayBackEnd.DTO.GhiChuMayTinhDTO;
 import com.example.QuanLyPhongMayBackEnd.entity.GhiChuMayTinh;
 import com.example.QuanLyPhongMayBackEnd.repository.GhiChuMayTinhRepository;
 import jakarta.transaction.Transactional;
@@ -99,5 +100,33 @@ public class GhiChuMayTinhService {
         }
         List<GhiChuMayTinh> dsGhiChuMayTinh = ghiChuMayTinhRepository.findByMayTinh_MaMayOrderByNgayBaoLoiDesc(maMay);
         return dsGhiChuMayTinh.isEmpty() ? null : dsGhiChuMayTinh.get(0);
+    }
+    public GhiChuMayTinhDTO mapToDTO(GhiChuMayTinh entity) {
+        if (entity == null) {
+            return null;
+        }
+        GhiChuMayTinhDTO dto = new GhiChuMayTinhDTO();
+        dto.setMaGhiChuMT(entity.getMaGhiChuMT());
+        dto.setNoiDung(entity.getNoiDung());
+        dto.setNgayBaoLoi(entity.getNgayBaoLoi()); // Keep original report date
+        dto.setNgaySua(entity.getNgaySua());       // Reflect the new update date
+
+        if (entity.getMayTinh() != null) {
+            dto.setMaMay(entity.getMayTinh().getMaMay());
+            // dto.setTenMay(entity.getMayTinh().getTenMay()); // Optional: fetch if needed
+        }
+        if (entity.getPhongMay() != null) {
+            dto.setMaPhong(entity.getPhongMay().getMaPhong());
+            // dto.setTenPhong(entity.getPhongMay().getTenPhong()); // Optional: fetch if needed
+        }
+        if (entity.getTaiKhoanBaoLoi() != null) {
+            dto.setMaTaiKhoanBaoLoi(entity.getTaiKhoanBaoLoi().getMaTK());
+            // dto.setTenTaiKhoanBaoLoi(entity.getTaiKhoanBaoLoi().getTenDangNhap()); // Optional: fetch if needed
+        }
+        if (entity.getTaiKhoanSuaLoi() != null) {
+            dto.setMaTaiKhoanSuaLoi(entity.getTaiKhoanSuaLoi().getMaTK());
+            // dto.setTenTaiKhoanSuaLoi(entity.getTaiKhoanSuaLoi().getTenDangNhap()); // Optional: fetch if needed
+        }
+        return dto;
     }
 }

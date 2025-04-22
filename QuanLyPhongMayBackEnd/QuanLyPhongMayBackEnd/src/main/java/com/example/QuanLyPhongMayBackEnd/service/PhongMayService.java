@@ -589,11 +589,11 @@ public class PhongMayService {
                         .collect(Collectors.toList());
 
                 List<MayTinhDTO> mayDangHoatDongDTO = mayDangHoatDong.stream()
-                        .map(mayTinh -> new MayTinhDTO(mayTinh.getMaMay(), mayTinh.getTenMay(), mayTinh.getTrangThai(), mayTinh.getMoTa()))
+                        .map(mayTinh -> new MayTinhDTO(mayTinh.getMaMay(), mayTinh.getTenMay(), mayTinh.getTrangThai(), mayTinh.getMoTa(), mayTinh.getNgayLapDat(), mayTinh.getNgayCapNhat(), mayTinh.getPhongMay().getMaPhong(), mayTinh.getPhongMay().getTenPhong()))
                         .collect(Collectors.toList());
 
                 List<MayTinhDTO> mayDaHongDTO = mayDaHong.stream()
-                        .map(mayTinh -> new MayTinhDTO(mayTinh.getMaMay(), mayTinh.getTenMay(), mayTinh.getTrangThai(), mayTinh.getMoTa()))
+                        .map(mayTinh -> new MayTinhDTO(mayTinh.getMaMay(), mayTinh.getTenMay(), mayTinh.getTrangThai(), mayTinh.getMoTa(), mayTinh.getNgayLapDat(), mayTinh.getNgayCapNhat(), mayTinh.getPhongMay().getMaPhong(), mayTinh.getPhongMay().getTenPhong()))
                         .collect(Collectors.toList());
 
                 // Thống kê thiết bị
