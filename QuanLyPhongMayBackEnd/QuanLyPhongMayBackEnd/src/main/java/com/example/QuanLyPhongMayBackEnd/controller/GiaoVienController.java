@@ -1,10 +1,11 @@
 package com.example.QuanLyPhongMayBackEnd.controller;
 
 import com.example.QuanLyPhongMayBackEnd.DTO.GiaoVienDTO;
-import com.example.QuanLyPhongMayBackEnd.entity.GiaoVien;
-import com.example.QuanLyPhongMayBackEnd.entity.Khoa;
-import com.example.QuanLyPhongMayBackEnd.entity.TaiKhoan;
+import com.example.QuanLyPhongMayBackEnd.entity.*;
 import com.example.QuanLyPhongMayBackEnd.service.GiaoVienService;
+import com.example.QuanLyPhongMayBackEnd.service.NhanVienService;
+import com.example.QuanLyPhongMayBackEnd.service.QuyenService;
+import com.example.QuanLyPhongMayBackEnd.service.TaiKhoanService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,12 @@ public class GiaoVienController {
 
     @Autowired
     private GiaoVienService giaoVienService;
+    @Autowired
+    private NhanVienService nhanVienService;
+    @Autowired
+    private TaiKhoanService taiKhoanService;
+    @Autowired
+    private QuyenService  quyenService;
 
     // API lấy danh sách giáo viên
     @GetMapping("/DSGiaoVien")
@@ -142,6 +149,63 @@ public class GiaoVienController {
         }
 
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+    @PostMapping("/chuyendoigiaovien")
+    public ResponseEntity<NhanVien> chuyenDoiGiaoVien(
+            @RequestParam String token,
+            @RequestParam Long maGV,
+            @RequestParam String tenNV,
+            @RequestParam String email,
+            @RequestParam String sDT,
+            @RequestParam Long maCV,
+            @RequestParam Long taiKhoanMaTK
+    ) {
+
+        if (!nhanVienService.isUserLoggedIn(token)) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+
+        GiaoVien giaoVien = giaoVienService.layGVTheoMa(String.valueOf(maGV), token);
+        if (giaoVien == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND); // Giáo viên không tồn tại
+        }
+
+        // Tạo đối tượng TaiKhoan và ChucVu từ tham số
+        TaiKhoan taiKhoan = new TaiKhoan(taiKhoanMaTK);
+        ChucVu chucVu = new ChucVu(maCV); // Assuming you have a constructor that accepts maCV
+
+        // Tạo đối tượng NhanVien từ thông tin và các tham số
+        NhanVien nhanVien = new NhanVien();
+        nhanVien.setTenNV(tenNV);
+        nhanVien.setEmail(email);
+        nhanVien.setsDT(sDT);
+        nhanVien.setChucVu(chucVu);
+        nhanVien.setTaiKhoan(taiKhoan);
+
+        NhanVien savedNhanVien = nhanVienService.luu(nhanVien); // Save the new NhanVien
+        if (savedNhanVien == null) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // Lưu nhân viên thất bại
+        }
+
+
+        giaoVienService.xoaGiaoVienOnly(String.valueOf(maGV), token); // Xóa GiaoVien (chỉ xóa GiaoVien, không TaiKhoan)
+
+
+
+        // Cập nhật ma_quyen của TaiKhoan thành 3 (Nhân viên)
+        TaiKhoan taiKhoanToUpdate = giaoVien.getTaiKhoan(); // Lấy TaiKhoan từ GiaoVien gốc
+        if (taiKhoanToUpdate != null) {
+            Quyen quyenNhanVien = quyenService.layQuyenTheoMa(3L, token); // Fetch Quyen with maQuyen = 3
+            if (quyenNhanVien != null) {
+                taiKhoanToUpdate.setQuyen(quyenNhanVien); // Đặt Quyen cho TaiKhoan
+                taiKhoanService.luu(taiKhoanToUpdate); // Lưu lại TaiKhoan đã cập nhật
+            } else {
+                // Handle case where Quyen with maQuyen=3 is not found in DB
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Quyền nhân viên không tồn tại trong hệ thống!");
+            }
+        }
+
+        return new ResponseEntity<>(savedNhanVien, HttpStatus.OK); // Return the created NhanVien
     }
 
 }
