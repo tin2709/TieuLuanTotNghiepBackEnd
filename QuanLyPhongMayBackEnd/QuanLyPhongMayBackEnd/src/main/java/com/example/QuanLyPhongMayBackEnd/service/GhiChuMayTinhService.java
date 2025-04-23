@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -188,5 +189,65 @@ public class GhiChuMayTinhService {
         }
 
         return dto;
+    }
+    public List<String> parseQuotedCsvString(String csvString) {
+        List<String> values = new ArrayList<>();
+        if (csvString == null || csvString.trim().isEmpty()) {
+            return values;
+        }
+
+        String trimmedString = csvString.trim();
+
+        // Loại bỏ dấu ngoặc kép đầu và cuối nếu toàn bộ chuỗi được bọc
+        // Ví dụ: "\"a\",\"b\"" -> "a\",\"b"
+        if (trimmedString.startsWith("\"") && trimmedString.endsWith("\"") && trimmedString.length() >= 2) {
+            trimmedString = trimmedString.substring(1, trimmedString.length() - 1);
+        } else {
+            // Nếu chuỗi không được bọc đúng hoặc không ở định dạng mong muốn,
+            // parser đơn giản này có thể gặp vấn đề.
+            // Tùy thuộc vào mức độ nghiêm ngặt bạn cần, bạn có thể ném lỗi ở đây.
+            // System.err.println("Cảnh báo: Chuỗi đầu vào cho noiDung có thể không được bọc hoàn hảo: " + csvString);
+        }
+
+        // Chia nhỏ dựa trên chuỗi ngăn cách GIỮA các giá trị đã được bọc, là ","
+        // Ví dụ: "a\",\"b\",\"c" -> ["a", "b", "c"]
+        String[] parts = trimmedString.split("\",\"");
+
+        // Thêm các phần vào danh sách, loại bỏ khoảng trắng ở đầu cuối mỗi phần
+        for (String part : parts) {
+            // Cẩn thận với trường hợp chuỗi rỗng "" sau khi split (ví dụ: input là "\"\",\"b\"")
+            // part.trim() sẽ xử lý hầu hết các trường hợp khoảng trắng.
+            values.add(part.trim());
+        }
+
+        // Xử lý trường hợp đặc biệt: input là "\"\"" -> list sẽ là [""]
+        // Có thể muốn trả về list rỗng trong trường hợp này.
+        if (values.size() == 1 && values.get(0).isEmpty() && csvString.trim().equals("\"\"")) {
+            return new ArrayList<>();
+        }
+
+
+        return values;
+    }
+
+    /**
+     * Hàm helper để parse một chuỗi chứa danh sách các số nguyên Long, ngăn cách bởi dấu phẩy.
+     * Giả định định dạng như: "1,2,3"
+     */
+    public List<Long> parseCsvLongString(String csvString) {
+        List<Long> ids = new ArrayList<>();
+        if (csvString == null || csvString.trim().isEmpty()) {
+            return ids;
+        }
+        String[] parts = csvString.split(",");
+        for (String part : parts) {
+            String trimmedPart = part.trim();
+            if (!trimmedPart.isEmpty()) {
+                // Long.parseLong sẽ ném NumberFormatException nếu không phải số hợp lệ,
+                // được bắt bởi khối try-catch của phương thức gọi.
+                ids.add(Long.parseLong(trimmedPart));
+            }
+        }
+        return ids;
     }
 }
