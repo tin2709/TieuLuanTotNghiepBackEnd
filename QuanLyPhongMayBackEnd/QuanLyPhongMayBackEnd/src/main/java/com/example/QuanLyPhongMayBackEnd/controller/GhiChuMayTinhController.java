@@ -137,7 +137,7 @@ public class GhiChuMayTinhController {
 
     // API lấy GhiChuMayTinh theo mã
     @GetMapping("/GhiChuMayTinh/{maGhiChuMT}")
-    public GhiChuMayTinh layGhiChuTheoMa(@PathVariable Long maGhiChuMT, @RequestParam String token){
+    public GhiChuMayTinh layGhiChuTheoMa(@RequestParam Long maGhiChuMT, @RequestParam String token){
         return ghiChuMayTinhService.layGhiChuTheoMa(maGhiChuMT, token);
     }
 
@@ -233,15 +233,17 @@ public class GhiChuMayTinhController {
     }
 
     // API lấy ghi chú gần nhất theo máy tính
-    @GetMapping("/GhiChuGanNhatTheoPhongMay/{maMay}")
-    public ResponseEntity<GhiChuMayTinh> layGhiChuGanNhatTheoMayTinh(@PathVariable Long maMay, @RequestParam String token) {
-        List<GhiChuMayTinh> dsGhiChu = ghiChuMayTinhService.layDSGhiChuTheoMayTinh(maMay, token);
-        if (dsGhiChu.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    @GetMapping("/GhiChuGanNhatTheoMayTinh") // Changed endpoint name slightly for clarity
+    public ResponseEntity<GhiChuMayTinhDTO> layGhiChuGanNhatDTOTheoMayTinh(@RequestParam Long maMay, @RequestParam String token) {
+
+        GhiChuMayTinhDTO latestDto = ghiChuMayTinhService.layGhiChuGanNhatDTOTheoMayTinh(maMay, token);
+
+        if (latestDto != null) {
+            // If DTO is found, return 200 OK with the DTO
+            return new ResponseEntity<>(latestDto, HttpStatus.OK);
+        } else {
+            // If service returns null (not found or unauthorized based on service logic)
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND); // Return 404
         }
-        GhiChuMayTinh ghiChuGanNhat = dsGhiChu.stream()
-                .max(Comparator.comparing(GhiChuMayTinh::getNgayBaoLoi))
-                .orElse(null);
-        return new ResponseEntity<>(ghiChuGanNhat, HttpStatus.OK);
     }
 }
