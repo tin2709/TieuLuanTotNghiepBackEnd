@@ -246,4 +246,234 @@ public class GhiChuMayTinhController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND); // Return 404
         }
     }
+    @PostMapping("/LuuNhieuGhiChuMayTinh")
+    public ResponseEntity<Object> luuNhieuGhiChuMayTinh(
+            @RequestParam String noiDung,
+            @RequestParam String maMay,
+            @RequestParam Long maPhong,
+            @RequestParam Long maTaiKhoanBaoLoi,
+            @RequestParam(required = false) Long maTaiKhoanSuaLoi,
+            @RequestParam String token
+    ) {
+        try {
+            // 1. Parse input strings into lists
+            // Hàm parseQuotedCsvString được thiết kế để xử lý định dạng "\"Nội dung 1\",\"Nội dung 2\""
+            List<String> noiDungList = ghiChuMayTinhService.parseQuotedCsvString(noiDung);
+            List<Long> maMayList = ghiChuMayTinhService.parseCsvLongString(maMay);
+
+            // 2. Validate input sizes
+            if (noiDungList.size() != maMayList.size()) {
+                Map<String, String> errorResponse = new HashMap<>();
+                errorResponse.put("message", "Số lượng nội dung (" + noiDungList.size() + ") và mã máy tính (" + maMayList.size() + ") phải khớp nhau.");
+                return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+            }
+            if (noiDungList.isEmpty()) {
+                Map<String, String> errorResponse = new HashMap<>();
+                errorResponse.put("message", "Danh sách nội dung và mã máy tính không được rỗng.");
+                return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+            }
+
+
+            // 3. Get common references (do this once before the loop)
+            // Sử dụng Long cho getReferenceById dựa trên kiểu của @RequestParam
+            PhongMay phongMayRef = phongMayRepository.getReferenceById(maPhong);
+            TaiKhoan taiKhoanBaoLoiRef = taiKhoanRepository.getReferenceById(String.valueOf(maTaiKhoanBaoLoi));
+            TaiKhoan taiKhoanSuaLoiRef = null;
+            if (maTaiKhoanSuaLoi != null) {
+                taiKhoanSuaLoiRef = taiKhoanRepository.getReferenceById(String.valueOf(maTaiKhoanSuaLoi));
+            }
+            // Lưu ý: EntityNotFoundException cho các tham chiếu này sẽ được bắt bởi khối catch bên dưới.
+
+            // 4. Process each item, create entities, and save
+            List<GhiChuMayTinhDTO> savedDTOs = new ArrayList<>();
+
+            // Vòng lặp này sẽ gán nội dung thứ i cho mã máy thứ i
+            for (int i = 0; i < maMayList.size(); i++) {
+                Long currentMaMay = maMayList.get(i);
+                String currentNoiDung = noiDungList.get(i);
+
+                // Lấy tham chiếu cho máy tính hiện tại (cần thực hiện trong vòng lặp)
+                MayTinh mayTinhRef = mayTinhRepository.getReferenceById(currentMaMay);
+                // Lưu ý: EntityNotFoundException cho Máy Tính cụ thể này cũng sẽ được bắt.
+
+                // Tạo và thiết lập thực thể GhiChuMayTinh cho cặp nội dung/mã máy hiện tại
+                GhiChuMayTinh ghiChuMayTinh = new GhiChuMayTinh();
+                ghiChuMayTinh.setNoiDung(currentNoiDung);
+                ghiChuMayTinh.setMayTinh(mayTinhRef);
+                ghiChuMayTinh.setPhongMay(phongMayRef); // Sử dụng tham chiếu chung
+                ghiChuMayTinh.setTaiKhoanBaoLoi(taiKhoanBaoLoiRef); // Sử dụng tham chiếu chung
+                ghiChuMayTinh.setTaiKhoanSuaLoi(taiKhoanSuaLoiRef); // Sử dụng tham chiếu chung (có thể null)
+                ghiChuMayTinh.setNgayBaoLoi(new Date()); // Đặt ngày/giờ hiện tại
+
+                // 5. Lưu thực thể bằng service
+                GhiChuMayTinh savedGhiChu = ghiChuMayTinhService.luu(ghiChuMayTinh, token); // Giả định service xử lý logic lưu và xác thực token
+
+                // 6. Ánh xạ thực thể đã lưu sang DTO và thêm vào danh sách
+                GhiChuMayTinhDTO dto = new GhiChuMayTinhDTO();
+                dto.setMaGhiChuMT(savedGhiChu.getMaGhiChuMT());
+                dto.setNoiDung(savedGhiChu.getNoiDung());
+                dto.setNgayBaoLoi(savedGhiChu.getNgayBaoLoi());
+                dto.setNgaySua(savedGhiChu.getNgaySua()); // Ban đầu sẽ là null
+
+                // Lấy ID và tùy chọn tên từ các tham chiếu (proxies)
+                if (savedGhiChu.getMayTinh() != null) {
+                    dto.setMaMay(savedGhiChu.getMayTinh().getMaMay());
+                    // dto.setTenMay(savedGhiChu.getMayTinh().getTenMay()); // Tùy chọn lấy tên
+                }
+                if (savedGhiChu.getPhongMay() != null) {
+                    dto.setMaPhong(savedGhiChu.getPhongMay().getMaPhong());
+                    // dto.setTenPhong(savedGhiChu.getPhongMay().getTenPhong()); // Tùy chọn lấy tên
+                }
+                if (savedGhiChu.getTaiKhoanBaoLoi() != null) {
+                    dto.setMaTaiKhoanBaoLoi(savedGhiChu.getTaiKhoanBaoLoi().getMaTK());
+                    // dto.setTenTaiKhoanBaoLoi(savedGhiChu.getTaiKhoanBaoLoi().getTenDangNhap()); // Tùy chọn lấy tên đăng nhập
+                }
+                if (savedGhiChu.getTaiKhoanSuaLoi() != null) {
+                    dto.setMaTaiKhoanSuaLoi(savedGhiChu.getTaiKhoanSuaLoi().getMaTK());
+                    // dto.setTenTaiKhoanSuaLoi(savedGhiChu.getTaiKhoanSuaLoi().getTenDangNhap()); // Tùy chọn lấy tên đăng nhập
+                }
+
+                savedDTOs.add(dto);
+            }
+
+
+            return new ResponseEntity<>(savedDTOs, HttpStatus.CREATED);
+
+        } catch (NumberFormatException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Định dạng mã máy tính không hợp lệ. Vui lòng cung cấp danh sách các số nguyên ngăn cách bởi dấu phẩy.");
+
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        } catch (EntityNotFoundException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Không tìm thấy một hoặc nhiều thực thể liên quan (Máy Tính, Phòng Máy hoặc Tài Khoản) với ID được cung cấp.");
+
+            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Có lỗi xảy ra khi lưu danh sách ghi chú máy tính: " + e.getMessage());
+
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    @PutMapping("/CapNhatNhieuGhiChuMayTinh")
+    public ResponseEntity<Object> capNhatNhieuGhiChuMayTinh(
+            @RequestParam String maGhiChuMT,
+            @RequestParam String noiDung,
+            @RequestParam String maMay,
+            @RequestParam Long maPhong,
+            @RequestParam Long maTaiKhoanBaoLoi,
+            @RequestParam(required = false) Long maTaiKhoanSuaLoi,
+            @RequestParam String token
+    ) {
+        try {
+            // 1. Parse input strings into lists
+            List<Long> maGhiChuMTList = ghiChuMayTinhService.parseCsvLongString(maGhiChuMT);
+            List<String> noiDungList = ghiChuMayTinhService.parseQuotedCsvString(noiDung);
+            List<Long> maMayList = ghiChuMayTinhService.parseCsvLongString(maMay);
+
+            // 2. Validate input sizes
+            if (maGhiChuMTList.size() != noiDungList.size() || maGhiChuMTList.size() != maMayList.size()) {
+                Map<String, String> errorResponse = new HashMap<>();
+                errorResponse.put("message", "Số lượng mã ghi chú (" + maGhiChuMTList.size() + "), nội dung (" + noiDungList.size() + "), và mã máy tính (" + maMayList.size() + ") phải khớp nhau.");
+                return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+            }
+            if (maGhiChuMTList.isEmpty()) {
+                Map<String, String> errorResponse = new HashMap<>();
+                errorResponse.put("message", "Danh sách mã ghi chú, nội dung, và mã máy tính không được rỗng.");
+                return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+            }
+
+
+            // 3. Get common references (do this once before the loop)
+            // Sử dụng Long cho getReferenceById dựa trên kiểu của @RequestParam
+            PhongMay phongMayRef = phongMayRepository.getReferenceById(maPhong);
+            TaiKhoan taiKhoanBaoLoiRef = taiKhoanRepository.getReferenceById(String.valueOf(maTaiKhoanBaoLoi));
+            TaiKhoan taiKhoanSuaLoiRef = null;
+            if (maTaiKhoanSuaLoi != null) {
+                taiKhoanSuaLoiRef = taiKhoanRepository.getReferenceById(String.valueOf(maTaiKhoanSuaLoi));
+            }
+            // Lưu ý: EntityNotFoundException cho các tham chiếu này sẽ được bắt bởi khối catch bên dưới.
+
+            // 4. Process each item, fetch existing, update, and save
+            List<GhiChuMayTinhDTO> updatedDTOs = new ArrayList<>();
+            Date now = new Date(); // Get current time once for all updates
+
+            // Loop through the lists based on index
+            for (int i = 0; i < maGhiChuMTList.size(); i++) {
+                Long currentMaGhiChuMT = maGhiChuMTList.get(i);
+                String currentNoiDung = noiDungList.get(i);
+                Long currentMaMay = maMayList.get(i);
+
+                // Fetch the existing entity for the current ghiChuMT
+                // Assuming layGhiChuTheoMa handles token validation and returns null or throws
+                GhiChuMayTinh existingGhiChu = ghiChuMayTinhService.layGhiChuTheoMa(currentMaGhiChuMT, token);
+
+                if (existingGhiChu == null) {
+
+                    throw new EntityNotFoundException("Không tìm thấy Ghi Chú Máy Tính với ID: " + currentMaGhiChuMT);
+                }
+                // Get reference for the current machine (needs to be done in the loop)
+                MayTinh mayTinhRef = mayTinhRepository.getReferenceById(currentMaMay);
+                // Note: EntityNotFoundException for this specific MayTinh will also be caught.
+
+
+                // Update the fetched entity with current item data and common references
+                existingGhiChu.setNoiDung(currentNoiDung);
+                existingGhiChu.setMayTinh(mayTinhRef);
+                existingGhiChu.setPhongMay(phongMayRef); // Use common reference
+                existingGhiChu.setTaiKhoanBaoLoi(taiKhoanBaoLoiRef); // Use common reference
+                existingGhiChu.setTaiKhoanSuaLoi(taiKhoanSuaLoiRef); // Use common reference (can be null)
+
+                // --- Conditional Date Update Logic (Replicated) ---
+                if (maTaiKhoanSuaLoi != null) {
+                    // If fixer ID is present for the batch, update the 'fixed date' for this item
+                    existingGhiChu.setNgaySua(now);
+                    // Do NOT touch ngayBaoLoi
+                } else {
+                    // If fixer ID is NOT present for the batch, update the 'report date' for this item
+                    existingGhiChu.setNgayBaoLoi(now); // Replicating original logic
+                    // Do NOT touch ngaySua
+                }
+                // ------------------------------------
+
+
+                // 5. Call the service to update the entity
+                // Assuming capNhat handles persistence and token/permission checks
+                GhiChuMayTinh updatedGhiChu = ghiChuMayTinhService.capNhat(existingGhiChu, token);
+
+                // 6. Map the updated entity to DTO and add to list
+                GhiChuMayTinhDTO dto = ghiChuMayTinhService.mapToDTO(updatedGhiChu); // Reuse mapToDTO
+
+                updatedDTOs.add(dto);
+            }
+
+            // 7. Return the list of updated DTOs
+            return new ResponseEntity<>(updatedDTOs, HttpStatus.OK); // Use OK (200) for successful update
+
+        } catch (NumberFormatException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Định dạng ID không hợp lệ trong danh sách (mã ghi chú, mã máy). Vui lòng cung cấp danh sách các số nguyên ngăn cách bởi dấu phẩy.");
+            // Log the error if needed
+            // e.g., Sentry.captureException(e);
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        } catch (EntityNotFoundException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            // Make error message more specific
+            errorResponse.put("message", "Không tìm thấy một hoặc nhiều thực thể liên quan (Ghi Chú Máy Tính, Máy Tính, Phòng Máy hoặc Tài Khoản) với ID được cung cấp khi cập nhật: " + e.getMessage());
+            // Log the specific entity not found if possible from the exception
+            // e.g., Sentry.captureException(e);
+            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            // Catch any other unexpected errors during processing or saving
+            // Sentry.captureException(e); // Example Sentry logging
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Có lỗi xảy ra khi cập nhật danh sách ghi chú máy tính: " + e.getMessage());
+            // Consider logging the full stack trace for debugging
+            // e.printStackTrace();
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 }

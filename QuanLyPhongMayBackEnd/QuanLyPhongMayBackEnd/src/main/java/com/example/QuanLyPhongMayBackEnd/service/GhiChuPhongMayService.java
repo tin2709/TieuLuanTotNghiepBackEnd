@@ -98,4 +98,5 @@ public class GhiChuPhongMayService {
         // Delete all records in ghi_chu_phong_may where ma_phong matches
         ghiChuPhongMayRepository.deleteByPhongMay_MaPhong(maPhong);
     }
+
 }
