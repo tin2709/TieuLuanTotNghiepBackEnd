@@ -2,8 +2,10 @@
 package com.example.QuanLyPhongMayBackEnd.service;
 
 import com.example.QuanLyPhongMayBackEnd.DTO.MayTinhDTO;
+import com.example.QuanLyPhongMayBackEnd.entity.GhiChuMayTinh;
 import com.example.QuanLyPhongMayBackEnd.entity.MayTinh;
 import com.example.QuanLyPhongMayBackEnd.entity.PhongMay;
+import com.example.QuanLyPhongMayBackEnd.repository.GhiChuMayTinhRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.MayTinhRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.PhongMayRepository;
 import jakarta.persistence.EntityNotFoundException; // Import for exception
@@ -28,32 +30,13 @@ public class MayTinhService {
     @Autowired
     private PhongMayRepository phongMayRepository;
     @Autowired
+    private GhiChuMayTinhRepository ghiChuMayTinhRepository;
+    @Autowired
     private TaiKhoanService taiKhoanService;
 
     public boolean isUserLoggedIn(String token) {
         return taiKhoanService.checkUserLoginStatus(token).get("status").equals("success");
     }
-    @Cacheable(value = "maytinhDTO", key = "#maMay")
-    @Transactional(readOnly = true) // Important for allowing lazy loading during mapping
-    public MayTinhDTO layMayTinhDTOTheoMa(Long maMay, String token) { // Renamed for clarity
-        if (!isUserLoggedIn(token)) {
-            // Handle invalid token - returning null here, controller should handle
-            // Consider throwing an AuthenticationException instead for better handling
-            return null;
-        }
-
-        Optional<MayTinh> mayTinhOptional = mayTinhRepository.findById(maMay);
-
-        if (mayTinhOptional.isPresent()) {
-            MayTinh mayTinhEntity = mayTinhOptional.get();
-            // Map the found entity to DTO
-            return mapToMayTinhDTO(mayTinhEntity);
-        } else {
-            // Entity not found
-            return null;
-        }
-    }
-
 
     // Phương thức lấy máy tính theo mã
     @Cacheable(value = "maytinh", key = "#maMay") // Cache individual MayTinh
@@ -81,41 +64,78 @@ public class MayTinhService {
         }
         return mayTinhRepository.findByPhongMay_MaPhong(maPhong);
     }
+    @Transactional(readOnly = true) // Good practice for read operations, ensures session is open
+    public List<MayTinhDTO> layDSMayTinhDTO(String token) {
+        if (!isUserLoggedIn(token)) {
+            // logger.warn("Unauthorized attempt to fetch MayTinh list with token: {}", token); // Optional logging
+            return Collections.emptyList(); // Return empty list for invalid token
+        }
+
+        // logger.info("Fetching all MayTinh entities"); // Optional logging
+        List<MayTinh> mayTinhEntities = mayTinhRepository.findAll();
+
+        if (mayTinhEntities.isEmpty()) {
+            // logger.info("No MayTinh entities found in the database."); // Optional logging
+            return Collections.emptyList(); // No computers found
+        }
+
+        // Use Stream API to map entities to DTOs and fetch latest note for each
+        // NOTE: This approach has the N+1 query problem. For large datasets, optimize this.
+        List<MayTinhDTO> dtos = mayTinhEntities.stream()
+                .map(mayTinhEntity -> {
+                    // 1. Map basic MayTinh details
+                    MayTinhDTO dto = mapToMayTinhDTO(mayTinhEntity);
+
+                    // 2. Fetch the latest GhiChu for this specific MayTinh
+                    Optional<GhiChuMayTinh> latestGhiChuOpt = ghiChuMayTinhRepository
+                            .findTopByMayTinhOrderByMaGhiChuMTDesc(mayTinhEntity);
+
+                    // 3. Set the noiDungGhiChu if found
+                    latestGhiChuOpt.ifPresent(latestGhiChu ->
+                            dto.setNoiDungGhiChu(latestGhiChu.getNoiDung())
+                    );
+                    // If not present, dto.noiDungGhiChu remains null (default)
+
+                    return dto;
+                })
+                .collect(Collectors.toList());
+
+        // logger.info("Successfully fetched and mapped {} MayTinhDTOs", dtos.size()); // Optional logging
+        return dtos;
+    }
 
     // Phương thức lấy danh sách tất cả máy tính
     // Add @Transactional(readOnly = true) for performance optimization on reads
-    @Cacheable(value = "maytinhsDTO") // Consider changing cache name if content differs significantly
+    @Cacheable(value = "maytinhDTO", key = "#maMay")
     @Transactional(readOnly = true)
-    public List<MayTinhDTO> layDSMayTinhDTO(String token) { // Renamed method for clarity
+    public MayTinhDTO layMayTinhDTOTheoMa(Long maMay, String token) {
         if (!isUserLoggedIn(token)) {
-            // Depending on requirements, you might throw an exception or return empty list
-            // Returning empty list here for simplicity
-            return Collections.emptyList();
+            return null;
         }
 
-        // Fetch entities using the optimized query
-        List<MayTinh> mayTinhEntities = mayTinhRepository.findAllWithPhongMayFetched();
+        Optional<MayTinh> mayTinhOptional = mayTinhRepository.findById(maMay);
 
-        // Map entities to DTOs
-        if (mayTinhEntities == null || mayTinhEntities.isEmpty()) {
-            return Collections.emptyList();
+        if (mayTinhOptional.isPresent()) {
+            MayTinh mayTinhEntity = mayTinhOptional.get();
+            MayTinhDTO dto = mapToMayTinhDTO(mayTinhEntity); // Map base fields
+
+            Optional<GhiChuMayTinh> latestGhiChuOpt = ghiChuMayTinhRepository
+                    .findTopByMayTinhOrderByMaGhiChuMTDesc(mayTinhEntity);
+
+            if (latestGhiChuOpt.isPresent()) {
+                GhiChuMayTinh latestGhiChu = latestGhiChuOpt.get();
+                dto.setNoiDungGhiChu(latestGhiChu.getNoiDung()); // <--- Use RENAMED setter
+            } else {
+                dto.setNoiDungGhiChu(null); // <--- Use RENAMED setter
+            }
+
+            return dto;
+        } else {
+            return null;
         }
-
-        // Using Streams API for mapping
-        return mayTinhEntities.stream()
-                .map(this::mapToMayTinhDTO) // Call helper mapping function
-                .collect(Collectors.toList());
-
-        /* // Alternative: Traditional loop mapping
-        List<MayTinhDTO> dtos = new ArrayList<>();
-        for (MayTinh entity : mayTinhEntities) {
-            dtos.add(mapToMayTinhDTO(entity));
-        }
-        return dtos;
-        */
     }
 
-    // Helper method to map Entity -> DTO
+    // mapToMayTinhDTO helper remains the same as it doesn't handle the GhiChu field
     private MayTinhDTO mapToMayTinhDTO(MayTinh entity) {
         if (entity == null) {
             return null;
@@ -128,18 +148,18 @@ public class MayTinhService {
         dto.setNgayLapDat(entity.getNgayLapDat());
         dto.setNgayCapNhat(entity.getNgayCapNhat());
 
-        // Safely access PhongMay details (already fetched due to JOIN FETCH)
         PhongMay phongMay = entity.getPhongMay();
         if (phongMay != null) {
             dto.setMaPhong(phongMay.getMaPhong());
             dto.setTenPhong(phongMay.getTenPhong());
         } else {
-            // Handle cases where a computer might not be assigned to a room (if possible)
             dto.setMaPhong(null);
             dto.setTenPhong(null);
         }
+        // noiDungGhiChu is set in the main method, not here.
         return dto;
     }
+
 
     // Phương thức xóa máy tính theo mã
     @Transactional
