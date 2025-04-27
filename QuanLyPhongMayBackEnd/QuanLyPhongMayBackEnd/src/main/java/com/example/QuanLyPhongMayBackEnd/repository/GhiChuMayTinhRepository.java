@@ -4,6 +4,8 @@ import com.example.QuanLyPhongMayBackEnd.entity.GhiChuMayTinh;
 import com.example.QuanLyPhongMayBackEnd.entity.MayTinh;
 import jakarta.persistence.TemporalType;
 import org.springframework.data.jpa.repository.JpaRepository;
+// Import JpaSpecificationExecutor
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.Temporal;
 import org.springframework.data.repository.query.Param;
@@ -14,7 +16,8 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface GhiChuMayTinhRepository extends JpaRepository<GhiChuMayTinh, Long> {
+// Add JpaSpecificationExecutor<GhiChuMayTinh>
+public interface GhiChuMayTinhRepository extends JpaRepository<GhiChuMayTinh, Long>, JpaSpecificationExecutor<GhiChuMayTinh> {
 
     // Your existing methods...
     List<GhiChuMayTinh> findByNgayBaoLoi(@Temporal(TemporalType.DATE) Date ngayBaoLoi);
