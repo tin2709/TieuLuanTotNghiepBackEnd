@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.text.ParseException;
 import java.util.*;
 
 @RestController
@@ -113,7 +114,7 @@ public class GhiChuMayTinhController {
 
     // API lấy danh sách GhiChuMayTinh
     @GetMapping("/DSGhiChuMayTinh")
-    public List<GhiChuMayTinh> layDSGhiChuMayTinh(@RequestParam String token){
+    public List<GhiChuMayTinhDTO> layDSGhiChuMayTinh(@RequestParam String token){
         return ghiChuMayTinhService.layDSGhiChu(token);
     }
 
@@ -475,5 +476,57 @@ public class GhiChuMayTinhController {
             return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+    @PutMapping("/CapNhatNguoiSuaVaThoiGianSua")
+    public ResponseEntity<Object> capNhatNoiDungVaNguoiSua( // Tên phương thức rõ ràng hơn
+                                                            @RequestParam Long maGhiChuMT,
+                                                            @RequestParam String ngaySuaStr,
+                                                            @RequestParam String thoiGianBatDau,
+                                                            @RequestParam String thoiGianKetThuc,
+                                                            @RequestParam Long maTKSuaLoi, // Đảm bảo client gửi đúng kiểu Long
+                                                            @RequestParam String token
+    ) {
+        try {
+            // Gọi phương thức service đã cập nhật
+            GhiChuMayTinh updatedGhiChuEntity = ghiChuMayTinhService.capNhatNoiDungVaNguoiSua(
+                    maGhiChuMT,
+                    ngaySuaStr,
+                    thoiGianBatDau,
+                    thoiGianKetThuc,
+                    maTKSuaLoi,
+                    token
+            );
 
+            // Map entity đã cập nhật sang DTO bằng phương thức trong service
+            GhiChuMayTinhDTO dto = ghiChuMayTinhService.mapToDTO(updatedGhiChuEntity);
+
+            // Log thông tin (tùy chọn)
+            System.out.println("Ghi chú " + maGhiChuMT + ": Nội dung được cập nhật thông tin lịch sửa bởi TK " + maTKSuaLoi);
+
+            // Trả về DTO trong response thành công
+            return ResponseEntity.ok(dto);
+
+        } catch (EntityNotFoundException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND); // 404
+        } catch (IllegalArgumentException e) { // Bắt lỗi thiếu tham số hoặc logic từ service
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST); // 400
+        } catch (SecurityException e) { // Bắt lỗi xác thực/quyền
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED); // 401
+        } catch (Exception e) { // Bắt các lỗi khác
+            // Log lỗi chi tiết
+            System.err.println("Lỗi hệ thống khi cập nhật nội dung ghi chú: " + e.getMessage());
+            e.printStackTrace(); // In stack trace ra console log của server
+            // Sentry.captureException(e); // Hoặc gửi lên Sentry/hệ thống logging khác
+
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Lỗi hệ thống không mong muốn xảy ra. Vui lòng thử lại sau."); // Thông báo chung chung cho client
+            // errorResponse.put("detail", e.getMessage()); // Cân nhắc chỉ log chi tiết ở server
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR); // 500
+        }
+    }
 }
