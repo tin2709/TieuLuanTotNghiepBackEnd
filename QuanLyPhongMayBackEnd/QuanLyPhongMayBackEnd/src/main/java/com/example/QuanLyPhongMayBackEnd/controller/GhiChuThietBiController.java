@@ -470,4 +470,100 @@ public class GhiChuThietBiController {
             return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+    @PutMapping("/CapNhatNguoiSuaVaThoiGianSuaThietBi") // Changed endpoint name
+    public ResponseEntity<Object> capNhatNguoiSuaVaThoiGianSuaThietBi( // Changed method name
+                                                                       @RequestParam Long maGhiChuTB, // Changed parameter name
+                                                                       @RequestParam String ngaySuaStr,
+                                                                       @RequestParam String thoiGianBatDau,
+                                                                       @RequestParam String thoiGianKetThuc,
+                                                                       @RequestParam Long maTKSuaLoi,
+                                                                       @RequestParam String token
+    ) {
+        try {
+            // Call the corresponding service method
+            GhiChuThietBi updatedGhiChuEntity = ghiChuThietBiService.capNhatNoiDungVaNguoiSuaThietBi(
+                    maGhiChuTB,
+                    ngaySuaStr,
+                    thoiGianBatDau,
+                    thoiGianKetThuc,
+                    maTKSuaLoi,
+                    token
+            );
+
+            // Map the updated entity to DTO using the detailed mapping method
+            GhiChuThietBiDTO dto = ghiChuThietBiService.mapToGhiChuThietBiDTO(updatedGhiChuEntity);
+
+            // Log info (optional)
+            System.out.println("Ghi chú Thiết Bị " + maGhiChuTB + ": Nội dung được cập nhật thông tin lịch sửa bởi TK " + maTKSuaLoi);
+
+            // Return the DTO in the success response
+            return ResponseEntity.ok(dto);
+
+        } catch (EntityNotFoundException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND); // 404
+        } catch (IllegalArgumentException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST); // 400
+        } catch (SecurityException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED); // 401
+        } catch (Exception e) {
+            // Log the detailed error
+            System.err.println("Lỗi hệ thống khi cập nhật nội dung ghi chú thiết bị: " + e.getMessage());
+            e.printStackTrace(); // Print stack trace to server logs
+            Sentry.captureException(e); // Send to Sentry or other logging system
+
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Lỗi hệ thống không mong muốn xảy ra. Vui lòng thử lại sau."); // Generic message for client
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR); // 500
+        }
+    }
+    @GetMapping("/searchGhiChuThietBiByAdmin")
+    public ResponseEntity<Map<String, Object>> searchGhiChuThietBiByAdmin(
+            @RequestParam String keyword, // e.g., "tenThietBi:LIKE:Router;tenPhong:EQ:P301"
+            @RequestParam String token) {
+
+        // Authentication Check (delegate to service or check here)
+        // Using TaiKhoanService directly for this example
+        if (!ghiChuThietBiService.isUserLoggedIn(token)) {
+            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        }
+
+        // Validate search parameter
+        if (keyword == null || keyword.trim().isEmpty()) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Search parameter cannot be empty.");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
+        try {
+            // Perform the search using the service method
+            List<GhiChuThietBiDTO> results = ghiChuThietBiService.timKiemGhiChuThietBiByAdmin(keyword, token);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("results", results);
+            response.put("size", results.size());
+
+            // Determine status based on results
+            HttpStatus status = (results == null || results.isEmpty()) ? HttpStatus.NO_CONTENT : HttpStatus.OK;
+
+            return new ResponseEntity<>(response, status);
+
+        } catch (IllegalArgumentException e) {
+            // Catch specific exceptions thrown by parsing helpers in the service
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Invalid search query format or value: " + e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            // Catch unexpected errors during search execution
+            Sentry.captureException(e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "An internal error occurred during the search: " + e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }

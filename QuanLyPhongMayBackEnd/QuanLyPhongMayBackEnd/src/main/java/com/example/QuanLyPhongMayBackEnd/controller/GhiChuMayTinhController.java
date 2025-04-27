@@ -529,4 +529,34 @@ public class GhiChuMayTinhController {
             return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR); // 500
         }
     }
+    @GetMapping("/searchGhiChuMayTinhByAdmin")
+    public ResponseEntity<Map<String, Object>> searchGhiChuMayTinhByAdmin(
+            @RequestParam String keyword, // The search query string (e.g., "noiDung:LIKE:hỏng;tenPhong:EQ:P301")
+            @RequestParam String token) {
+
+        // Reuse the service method for authentication (assuming it's safe to call directly)
+        // Consider a dedicated authentication check if needed
+        if (!ghiChuMayTinhService.isUserLoggedIn(token)) {
+            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        }
+
+        // Validate the search keyword
+        if (keyword == null || keyword.trim().isEmpty()) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Search parameter cannot be empty.");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
+        // Perform the search using the service method
+        List<GhiChuMayTinhDTO> results = ghiChuMayTinhService.timKiemGhiChuMayTinhByAdmin(keyword, token);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("results", results);
+        response.put("size", results.size());
+
+        // Use NO_CONTENT (204) if results are empty, OK (200) otherwise
+        HttpStatus status = (results == null || results.isEmpty()) ? HttpStatus.NO_CONTENT : HttpStatus.OK;
+
+        return new ResponseEntity<>(response, status);
+    }
 }
