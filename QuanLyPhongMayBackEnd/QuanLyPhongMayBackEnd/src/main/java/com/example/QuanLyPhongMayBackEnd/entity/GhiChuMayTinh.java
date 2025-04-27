@@ -16,12 +16,12 @@ public class GhiChuMayTinh {
     private String noiDung;
 
     // Relationship to the specific computer
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "ma_may") // Foreign key to may_tinh table
     private MayTinh mayTinh;
 
     // *** New Relationship to the room the computer belongs to ***
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "ma_phong", referencedColumnName = "ma_phong") // Foreign key to phong_may table
     private PhongMay phongMay;
     // ************************************************************
@@ -34,11 +34,11 @@ public class GhiChuMayTinh {
     @Column(name = "ngay_sua")
     private Date ngaySua;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "matk_bao_loi", referencedColumnName = "ma_tk") // Foreign key to tai_khoan table
     private TaiKhoan taiKhoanBaoLoi;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "matk_sua_loi", referencedColumnName = "ma_tk") // Foreign key to tai_khoan table
     private TaiKhoan taiKhoanSuaLoi;
 

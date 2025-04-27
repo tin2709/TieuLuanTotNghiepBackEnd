@@ -5,19 +5,24 @@ import com.example.QuanLyPhongMayBackEnd.entity.MayTinh;
 import com.example.QuanLyPhongMayBackEnd.entity.PhongMay;
 import com.example.QuanLyPhongMayBackEnd.entity.TaiKhoan;
 import com.example.QuanLyPhongMayBackEnd.repository.GhiChuMayTinhRepository;
+import com.example.QuanLyPhongMayBackEnd.repository.TaiKhoanRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.stream.Collectors;
+
 @Service
 public class GhiChuMayTinhService {
 
     @Autowired
     private GhiChuMayTinhRepository ghiChuMayTinhRepository;
+    @Autowired
+    private TaiKhoanRepository taiKhoanRepository;
     @Autowired
     private TaiKhoanService taiKhoanService;
     private boolean isUserLoggedIn(String token) {
@@ -63,13 +68,69 @@ public class GhiChuMayTinhService {
         return ghiChuMayTinhRepository.save(ghiChuMayTinh);
     }
 
-    public List<GhiChuMayTinh> layDSGhiChu(String token) {
+    @Transactional(readOnly = true) // Good practice for read-only operations
+    public List<GhiChuMayTinhDTO> layDSGhiChu(String token) {
         if (!isUserLoggedIn(token)) {
-            return null;
+            // Return an empty list for unauthorized access
+            return Collections.emptyList();
+            // Or: throw new UnauthorizedException("User is not authenticated");
         }
-        return ghiChuMayTinhRepository.findAll();
+
+        // Use the repository method that fetches details
+        List<GhiChuMayTinh> ghiChuList = ghiChuMayTinhRepository.findAllWithDetails();
+
+        // Map the entities to DTOs
+        return ghiChuList.stream()
+                .map(this::convertToDto) // Use a helper method for mapping
+                .collect(Collectors.toList());
     }
 
+    // Helper method to convert Entity to DTO
+    private GhiChuMayTinhDTO convertToDto(GhiChuMayTinh ghiChu) {
+        GhiChuMayTinhDTO dto = new GhiChuMayTinhDTO();
+        dto.setMaGhiChuMT(ghiChu.getMaGhiChuMT());
+        dto.setNoiDung(ghiChu.getNoiDung());
+        dto.setNgayBaoLoi(ghiChu.getNgayBaoLoi());
+        dto.setNgaySua(ghiChu.getNgaySua()); // Will be null if not set
+
+        // --- Map related entities (handle potential nulls) ---
+
+        // MayTinh details
+        MayTinh mayTinh = ghiChu.getMayTinh();
+        if (mayTinh != null) {
+            dto.setMaMay(mayTinh.getMaMay());
+            dto.setTenMay(mayTinh.getTenMay()); // Assuming MayTinh has a 'tenMay' field
+            // If PhongMay is ONLY linked via MayTinh (and not directly in GhiChuMayTinh)
+            // PhongMay phongMayFromMayTinh = mayTinh.getPhongMay();
+            // if (phongMayFromMayTinh != null) {
+            //     dto.setMaPhong(phongMayFromMayTinh.getMaPhong());
+            //     dto.setTenPhong(phongMayFromMayTinh.getTenPhong());
+            // }
+        }
+
+        // PhongMay details (if directly linked in GhiChuMayTinh)
+        PhongMay phongMay = ghiChu.getPhongMay();
+        if (phongMay != null) {
+            dto.setMaPhong(phongMay.getMaPhong());
+            dto.setTenPhong(phongMay.getTenPhong()); // Assuming PhongMay has a 'tenPhong' field
+        }
+
+        // TaiKhoanBaoLoi details
+        TaiKhoan baoLoiUser = ghiChu.getTaiKhoanBaoLoi();
+        if (baoLoiUser != null) {
+            dto.setMaTaiKhoanBaoLoi(baoLoiUser.getMaTK()); // Assuming TaiKhoan has 'maTaiKhoan'
+            dto.setTenTaiKhoanBaoLoi(baoLoiUser.getTenDangNhap()); // Assuming TaiKhoan has 'tenTaiKhoan'
+        }
+
+        // TaiKhoanSuaLoi details
+        TaiKhoan suaLoiUser = ghiChu.getTaiKhoanSuaLoi();
+        if (suaLoiUser != null) {
+            dto.setMaTaiKhoanSuaLoi(suaLoiUser.getMaTK());
+            dto.setTenTaiKhoanSuaLoi(suaLoiUser.getTenDangNhap());
+        }
+
+        return dto;
+    }
     public GhiChuMayTinh capNhat(GhiChuMayTinh ghiChuMayTinh,String token) {
         if (!isUserLoggedIn(token)) {
             return null; // Token không hợp lệ
@@ -250,4 +311,56 @@ public class GhiChuMayTinhService {
         }
         return ids;
     }
+    @Transactional
+    public GhiChuMayTinh capNhatNoiDungVaNguoiSua(
+            Long maGhiChuMT,
+            String ngaySuaStr,
+            String thoiGianBatDauStr,
+            String thoiGianKetThucStr,
+            Long maTKSuaLoi,
+            String token
+    ) throws EntityNotFoundException, IllegalArgumentException, SecurityException {
+
+        if (!isUserLoggedIn(token)) { // Hoặc cơ chế kiểm tra token phù hợp
+            throw new SecurityException("Token không hợp lệ hoặc người dùng chưa đăng nhập.");
+        }
+
+        // Kiểm tra các tham số đầu vào cho chuỗi nội dung
+        if (ngaySuaStr == null || ngaySuaStr.trim().isEmpty() ||
+                thoiGianBatDauStr == null || thoiGianBatDauStr.trim().isEmpty() ||
+                thoiGianKetThucStr == null || thoiGianKetThucStr.trim().isEmpty()) {
+            throw new IllegalArgumentException("Ngày sửa, thời gian bắt đầu và thời gian kết thúc không được để trống.");
+        }
+
+        // Fetch GhiChuMayTinh entity
+        GhiChuMayTinh ghiChuMayTinh = ghiChuMayTinhRepository.findById(maGhiChuMT)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Ghi Chú Máy Tính với ID: " + maGhiChuMT));
+
+        // Fetch TaiKhoan entity cho người sửa lỗi
+        // Giả sử ID Tài khoản là Long
+        TaiKhoan taiKhoanSuaLoi = taiKhoanRepository.findById(String.valueOf(maTKSuaLoi))
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Tài Khoản sửa lỗi với ID: " + maTKSuaLoi));
+
+        // Lấy nội dung hiện tại và tạo chuỗi mới
+        String noiDungHienTai = ghiChuMayTinh.getNoiDung() != null ? ghiChuMayTinh.getNoiDung() : "";
+        String thongTinSuaChua = "\n(Sẽ được sửa vào ngày " + ngaySuaStr.trim() +
+                " từ " + thoiGianBatDauStr.trim() +
+                " đến " + thoiGianKetThucStr.trim() + ")";
+        String noiDungMoi = noiDungHienTai + thongTinSuaChua;
+
+        // Cập nhật entity
+        ghiChuMayTinh.setNoiDung(noiDungMoi);
+        ghiChuMayTinh.setTaiKhoanSuaLoi(taiKhoanSuaLoi);
+        // Không cập nhật ghiChuMayTinh.setNgaySua(...)
+
+        // Save và trả về entity đã cập nhật
+        return ghiChuMayTinhRepository.save(ghiChuMayTinh);
+    }
+
+    /**
+     * Maps GhiChuMayTinh entity (including related entities) to GhiChuMayTinhDTO.
+     * Assumes GhiChuMayTinh entity has relationships to MayTinh, PhongMay, and TaiKhoan.
+     */
+
+
 }

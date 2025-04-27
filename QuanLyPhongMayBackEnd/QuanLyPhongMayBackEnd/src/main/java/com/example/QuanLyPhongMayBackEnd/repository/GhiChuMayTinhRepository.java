@@ -15,19 +15,31 @@ import java.util.Optional;
 
 @Repository
 public interface GhiChuMayTinhRepository extends JpaRepository<GhiChuMayTinh, Long> {
-    public List<GhiChuMayTinh> findByNgayBaoLoi(@Temporal(TemporalType.DATE) Date ngayBaoLoi);
-    public List<GhiChuMayTinh> findByNgaySua( @Temporal(TemporalType.DATE) Date ngaySua);
-    public List<GhiChuMayTinh> findByMayTinh_MaMay(Long maMay);
-    public List<GhiChuMayTinh> findByMayTinh_MaMayOrderByNgayBaoLoiDesc(Long maMay);
+
+    // Your existing methods...
+    List<GhiChuMayTinh> findByNgayBaoLoi(@Temporal(TemporalType.DATE) Date ngayBaoLoi);
+    List<GhiChuMayTinh> findByNgaySua( @Temporal(TemporalType.DATE) Date ngaySua);
+    List<GhiChuMayTinh> findByMayTinh_MaMay(Long maMay);
+    List<GhiChuMayTinh> findByMayTinh_MaMayOrderByNgayBaoLoiDesc(Long maMay);
+
     @Query("SELECT gc FROM GhiChuMayTinh gc " +
             "LEFT JOIN FETCH gc.mayTinh mt " +
-            "LEFT JOIN FETCH mt.phongMay pm " + // Fetch PhongMay via MayTinh
+            // LEFT JOIN FETCH mt.phongMay pm  // Only if PhongMay is accessed VIA MayTinh
+            "LEFT JOIN FETCH gc.phongMay pm " + // Direct fetch for phongMay in GhiChuMayTinh
             "LEFT JOIN FETCH gc.taiKhoanBaoLoi tkbl " +
             "LEFT JOIN FETCH gc.taiKhoanSuaLoi tksl " +
             "WHERE gc.mayTinh.maMay = :maMay " +
             "ORDER BY gc.ngayBaoLoi DESC")
-    List<GhiChuMayTinh> findLatestByMayTinhWithDetails(@Param("maMay") Long maMay); // Fetch list ordered
+    List<GhiChuMayTinh> findLatestByMayTinhWithDetails(@Param("maMay") Long maMay);
+
     Optional<GhiChuMayTinh> findTopByMayTinhOrderByMaGhiChuMTDesc(MayTinh mayTinh);
 
+    // *** NEW METHOD ***
+    @Query("SELECT gc FROM GhiChuMayTinh gc " +
+            "LEFT JOIN FETCH gc.mayTinh " +          // Fetch MayTinh
+            "LEFT JOIN FETCH gc.phongMay " +         // Fetch PhongMay (direct relation)
+            "LEFT JOIN FETCH gc.taiKhoanBaoLoi " +   // Fetch TaiKhoanBaoLoi
+            "LEFT JOIN FETCH gc.taiKhoanSuaLoi")     // Fetch TaiKhoanSuaLoi
+    List<GhiChuMayTinh> findAllWithDetails(); // Method to fetch all GhiChuMayTinh with related entities
 
 }
