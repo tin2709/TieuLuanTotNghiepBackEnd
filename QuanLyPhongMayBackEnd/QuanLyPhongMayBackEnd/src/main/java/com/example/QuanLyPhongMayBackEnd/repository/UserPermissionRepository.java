@@ -1,9 +1,9 @@
-package com.example.QuanLyPhongMayBackEnd.repository; // Hoặc package repository của bạn
+package com.example.QuanLyPhongMayBackEnd.repository;
 
 import com.example.QuanLyPhongMayBackEnd.entity.UserPermission;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Transactional; // Keep if you use delete methods
 
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +21,10 @@ public interface UserPermissionRepository extends JpaRepository<UserPermission, 
     Optional<UserPermission> findByTaiKhoan_MaTKAndResourceAndAction(Long userId, String resource, String action);
 
     // Xóa một quyền cụ thể
-    @Transactional // Cần thiết cho các thao tác delete bằng query
+    @Transactional
     void deleteByTaiKhoan_MaTKAndResourceAndAction(Long userId, String resource, String action);
+
+    // --- NEW: Find all permissions for a list of user IDs ---
+    List<UserPermission> findByTaiKhoan_MaTKIn(List<Long> userIds);
+    // --- END NEW ---
 }
