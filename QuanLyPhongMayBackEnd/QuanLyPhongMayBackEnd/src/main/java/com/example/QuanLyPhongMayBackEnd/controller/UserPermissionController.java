@@ -225,4 +225,48 @@ public class UserPermissionController {
             return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR); // 500
         }
     }
+    @GetMapping("/getUserPermissionsByUserId") // Changed path slightly for clarity
+    // @PreAuthorize("hasRole('ADMIN')") // Consider restricting access
+    public ResponseEntity<Object> getUserPermissionsByUserId(
+            @RequestParam Long userId, // Accepts a single Long
+            @RequestParam String token
+    ) {
+        // 1. Validate token
+        if (!userPermissionService.isUserLoggedIn(token)) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Token không hợp lệ hoặc người dùng chưa đăng nhập!");
+            return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED); // 401 Unauthorized
+        }
+
+        // 2. Handle potentially null userId (Spring's @RequestParam for primitive Long requires it,
+        //    but for wrapper Long, it can be null if not provided)
+        //    Using wrapper Long and checking null is safer than primitive long
+        if (userId == null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "User ID không được rỗng.");
+            response.put("permissions", Collections.emptyList());
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST); // 400 Bad Request for missing required param
+        }
+
+
+        // 3. Call the service to get permissions
+        try {
+            List<UserPermission> permissions = userPermissionService.getUserPermissionsByUserId(userId); // Use the new service method
+
+            // 4. Prepare and return the response
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", String.format("Tìm thấy %d quyền cho người dùng ID %d.", permissions.size(), userId));
+            response.put("permissions", permissions); // Add the list of permissions
+
+            return new ResponseEntity<>(response, HttpStatus.OK); // 200 OK
+
+        } catch (Exception e) {
+            // 5. Handle unexpected errors
+            System.err.println("Lỗi không xác định khi lấy quyền theo ID user: " + e.getMessage());
+            e.printStackTrace();
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Lỗi hệ thống khi lấy quyền theo ID user.");
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+        }
+    }
 }

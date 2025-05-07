@@ -206,5 +206,26 @@ public class UserPermissionService {
         // 5. Trả về Map kết quả
         return result;
     }
+    public List<UserPermission> getUserPermissionsByIds(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return userPermissionRepository.findByTaiKhoan_MaTKIn(userIds);
+    }
+
+
+    // --- NEW: Get permissions for a single user ID ---
+    /**
+     * Lấy tất cả UserPermission cho một user ID cụ thể.
+     * Trả về danh sách rỗng nếu không tìm thấy quyền nào hoặc user ID là null.
+     */
+    public List<UserPermission> getUserPermissionsByUserId(Long userId) {
+        // Handle null input gracefully
+        if (userId == null) {
+            return Collections.emptyList(); // Return an empty list if userId is null
+        }
+        // Call the repository method for a single user ID
+        return userPermissionRepository.findByTaiKhoan_MaTK(userId);
+    }
 
 }
