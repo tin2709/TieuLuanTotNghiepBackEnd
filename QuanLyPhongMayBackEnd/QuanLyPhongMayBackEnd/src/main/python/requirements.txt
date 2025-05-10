@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+# pydantic is a dependency of fastapi and will be installed automatically
+# You might need other libraries depending on your specific requirements,
+# e.g., python-multipart for form data, python-jose[cryptography] for JWT, etc.
+python-multipart
