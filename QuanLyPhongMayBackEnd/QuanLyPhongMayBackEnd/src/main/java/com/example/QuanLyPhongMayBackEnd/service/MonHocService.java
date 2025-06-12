@@ -1,6 +1,10 @@
 package com.example.QuanLyPhongMayBackEnd.service;
 import com.example.QuanLyPhongMayBackEnd.DTO.MonHocDTO;
+import com.example.QuanLyPhongMayBackEnd.entity.CaThucHanh;
+import com.example.QuanLyPhongMayBackEnd.entity.GiaoVien;
 import com.example.QuanLyPhongMayBackEnd.entity.MonHoc;
+import com.example.QuanLyPhongMayBackEnd.repository.CaThucHanhRepository;
+import com.example.QuanLyPhongMayBackEnd.repository.GiaoVienRepository;
 import com.example.QuanLyPhongMayBackEnd.repository.MonHocRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.criteria.Expression;
@@ -29,6 +33,11 @@ public class MonHocService {
 
     @Autowired
     private MonHocRepository monHocRepository;
+    @Autowired
+    private CaThucHanhRepository caThucHanhRepository; // Bổ sung
+    @Autowired
+    private GiaoVienRepository giaoVienRepository;     // Bổ sung
+
     @Autowired
     private TaiKhoanService taiKhoanService; // Assuming TaiKhoanService is available for isUserLoggedIn
 
@@ -117,6 +126,34 @@ public class MonHocService {
 
         return monHocRepository.save(existingMonHoc);
     }
+    // Trong MonHocService.java
+
+    // PHƯƠNG THỨC MỚI: Lấy danh sách môn học theo mã tài khoản
+    @Transactional(readOnly = true)
+    public List<MonHoc> layDSMonHocByTaiKhoan(Long maTK, String token) {
+        if (!isUserLoggedIn(token)) {
+            throw new AccessDeniedException("Token không hợp lệ hoặc đã hết hạn.");
+        }
+
+        // 1. Tìm kiếm Giáo viên dựa trên maTK của TaiKhoan liên kết
+        // LOẠI BỎ CÁI CAST (GiaoVien) -> vì findByTaiKhoan_MaTK trả về Optional<GiaoVien>,
+        // và .orElseThrow() đã trả về GiaoVien rồi.
+        GiaoVien giaoVien = giaoVienRepository.findByTaiKhoan_MaTK(maTK)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy giáo viên liên kết với tài khoản có mã: " + maTK));
+
+        // 2. Lấy maGiaoVien từ đối tượng GiaoVien tìm được
+        Long maGiaoVien = giaoVien.getMaGiaoVien(); // Đảm bảo GiaoVien entity có getMaGiaoVien()
+
+        // 3. Lấy tất cả các ca thực hành của giáo viên này (dùng maGiaoVien)
+        List<CaThucHanh> caThucHanhs = caThucHanhRepository.findByGiaoVien_MaGiaoVien(maGiaoVien); // Đảm bảo CaThucHanhRepository có phương thức này
+
+        // 4. Trích xuất các môn học duy nhất từ danh sách ca thực hành
+        return caThucHanhs.stream()
+                .map(CaThucHanh::getMonHoc)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
 
     @Transactional
     @Caching(evict = {

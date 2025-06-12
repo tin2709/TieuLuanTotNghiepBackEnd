@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface GiaoVienRepository extends JpaRepository<GiaoVien, String>, JpaSpecificationExecutor<GiaoVien> {
@@ -15,4 +16,7 @@ public interface GiaoVienRepository extends JpaRepository<GiaoVien, String>, Jpa
     void deleteByMaGiaoVien(Long maGiaoVien);
     @Query("SELECT g FROM GiaoVien g JOIN FETCH g.khoa") // JPQL query to fetch GiaoVien and join fetch Khoa
     List<GiaoVien> findAllWithKhoa();
+
+    Optional<GiaoVien> findByTaiKhoan_MaTK(Long maTK);
+
 }

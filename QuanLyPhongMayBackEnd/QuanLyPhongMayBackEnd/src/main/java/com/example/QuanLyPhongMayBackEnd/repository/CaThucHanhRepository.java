@@ -38,5 +38,6 @@ public interface CaThucHanhRepository extends JpaRepository<CaThucHanh, Long>, J
     // Using java.time.LocalDate is generally preferred over java.util.Date.
     List<CaThucHanh> findByNgayThucHanhAndPhongMay(LocalDate ngayThucHanh, PhongMay phongMay);
 
+    List<CaThucHanh> findByGiaoVien_MaGiaoVien(Long maGiaoVien);
 
 }
