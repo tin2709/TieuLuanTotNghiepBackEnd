@@ -54,8 +54,36 @@ public class MonHocController {
             return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+    @GetMapping("/DSMonHocByTaiKhoan")
+    public ResponseEntity<Object> layDSMonHocByTaiKhoan(
+            @RequestParam Long maTaiKhoan, // Tham số đã đổi
+            @RequestParam String token) {
+        Map<String, String> response = new HashMap<>();
+        try {
+            List<MonHoc> dsMonHoc = monHocService.layDSMonHocByTaiKhoan(maTaiKhoan, token); // Gọi service mới
 
-    // API cập nhật môn học (MỚI)
+            if (dsMonHoc.isEmpty()) {
+                response.put("message", "Không tìm thấy môn học nào cho tài khoản có mã: " + maTaiKhoan);
+                return new ResponseEntity<>(response, HttpStatus.NO_CONTENT);
+            }
+            return new ResponseEntity<>(dsMonHoc, HttpStatus.OK);
+
+        } catch (AccessDeniedException e) {
+            response.put("message", e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+        } catch (EntityNotFoundException e) {
+            response.put("message", e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            Sentry.captureException(e);
+            response.put("message", "Lỗi khi lấy danh sách môn học của tài khoản: " + e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+}
+
+
+// API cập nhật môn học (MỚI)
     @PutMapping("/CapNhatMonHoc") // Sử dụng PathVariable cho maMon giống frontend
     public ResponseEntity<Object> capNhatMonHoc(
             @RequestParam Long maMon, // Lấy maMon từ path
