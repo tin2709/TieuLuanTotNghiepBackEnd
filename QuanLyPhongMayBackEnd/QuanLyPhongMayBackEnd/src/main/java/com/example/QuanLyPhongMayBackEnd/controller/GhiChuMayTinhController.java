@@ -559,4 +559,54 @@ public class GhiChuMayTinhController {
 
         return new ResponseEntity<>(response, status);
     }
+    @PutMapping("/CapNhatNhieuGhiChuMayTinhKhiSuaXong")
+    public ResponseEntity<Object> capNhatNhieuGhiChuMayTinhKhiSuaXong(
+            @RequestParam String maMayIds, // Danh sách mã máy, ví dụ: "1,2,5,7"
+            @RequestParam String userName, // Thêm tham số userName vào đây
+            @RequestParam String token
+    ) {
+        try {
+            List<Long> maMayList = ghiChuMayTinhService.parseCsvLongString(maMayIds);
+
+            if (maMayList.isEmpty()) {
+                Map<String, String> errorResponse = new HashMap<>();
+                errorResponse.put("message", "Danh sách mã máy tính không được rỗng.");
+                return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+            }
+
+            // Gọi service để thực hiện cập nhật, truyền userName mới vào
+            List<GhiChuMayTinhDTO> updatedNotes = ghiChuMayTinhService.capNhatNhieuGhiChuMayTinhKhiSuaXong(maMayList, userName, token);
+
+            if (updatedNotes.isEmpty()) {
+                Map<String, String> response = new HashMap<>();
+                response.put("message", "Không tìm thấy ghi chú nào cần cập nhật cho các máy tính đã cung cấp hoặc chúng đã được sửa.");
+                return new ResponseEntity<>(response, HttpStatus.OK);
+            }
+
+            return new ResponseEntity<>(updatedNotes, HttpStatus.OK);
+
+        } catch (NumberFormatException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Định dạng mã máy tính không hợp lệ. Vui lòng cung cấp danh sách các số nguyên ngăn cách bởi dấu phẩy.");
+            System.err.println("NumberFormatException in capNhatNhieuGhiChuMayTinhKhiSuaXong: " + e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        } catch (SecurityException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+        } catch (EntityNotFoundException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            System.err.println("EntityNotFoundException in capNhatNhieuGhiChuMayTinhKhiSuaXong: " + e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            Sentry.captureException(e);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Có lỗi xảy ra khi cập nhật ghi chú máy tính sau khi sửa xong: " + e.getMessage());
+            System.err.println("Unexpected Exception in capNhatNhieuGhiChuMayTinhKhiSuaXong: " + e.getMessage());
+            e.printStackTrace();
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }
+
