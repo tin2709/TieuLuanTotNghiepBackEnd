@@ -566,4 +566,74 @@ public class GhiChuThietBiController {
             return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+    @PutMapping("/CapNhatNhieuGhiChuThietBiKhiSuaXong")
+    public ResponseEntity<Object> capNhatNhieuGhiChuThietBiKhiSuaXong(
+            @RequestParam String maGhiChuTBIds, // Danh sách mã ghi chú thiết bị, ví dụ: "1,2,5,7"
+            @RequestParam String userName,       // Username của người đã sửa lỗi
+            @RequestParam String token
+    ) {
+        try {
+            // 1. Parse the list of GhiChuThietBi IDs
+            List<Long> idsToUpdate = ghiChuThietBiService.parseCsvLongString(maGhiChuTBIds);
+
+            if (idsToUpdate.isEmpty()) {
+                Map<String, String> errorResponse = new HashMap<>();
+                errorResponse.put("message", "Danh sách mã ghi chú thiết bị không được rỗng.");
+                return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+            }
+
+            // 2. Call the service to perform the batch update
+            // Service will handle finding TaiKhoan by username and updating notes
+            Map<String, Object> serviceResult = ghiChuThietBiService.capNhatNhieuGhiChuThietBiKhiSuaXong(
+                    idsToUpdate, userName, token);
+
+            @SuppressWarnings("unchecked") // Safe cast as we know the type from service
+            List<GhiChuThietBiDTO> updatedNotes = (List<GhiChuThietBiDTO>) serviceResult.get("updatedNotes");
+            @SuppressWarnings("unchecked") // Safe cast
+            List<String> failedUpdates = (List<String>) serviceResult.get("failedUpdates");
+
+            // 3. Construct the response based on success/failure of batch updates
+            if (updatedNotes.isEmpty() && !failedUpdates.isEmpty()) {
+                // All updates failed
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("message", "Không có ghi chú nào được cập nhật. Chi tiết lỗi: " + String.join("; ", failedUpdates));
+                return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+            } else if (!failedUpdates.isEmpty()) {
+                // Some succeeded, some failed (Partial Content)
+                Map<String, Object> partialSuccessResponse = new HashMap<>();
+                partialSuccessResponse.put("message", "Cập nhật hoàn tất với một số lỗi. Các ghi chú không được cập nhật: " + String.join("; ", failedUpdates));
+                partialSuccessResponse.put("updatedNotes", updatedNotes);
+                return new ResponseEntity<>(partialSuccessResponse, HttpStatus.PARTIAL_CONTENT); // HTTP 206
+            } else {
+                // All succeeded
+                Map<String, Object> successResponse = new HashMap<>();
+                successResponse.put("message", "Cập nhật thành công các ghi chú đã chọn.");
+                successResponse.put("updatedNotes", updatedNotes);
+                return ResponseEntity.ok(successResponse); // HTTP 200
+            }
+
+        } catch (NumberFormatException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Định dạng mã ghi chú thiết bị không hợp lệ. Vui lòng cung cấp danh sách các số nguyên ngăn cách bởi dấu phẩy.");
+            System.err.println("NumberFormatException in capNhatNhieuGhiChuThietBiKhiSuaXong: " + e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        } catch (SecurityException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+        } catch (EntityNotFoundException e) {
+            // This catch block handles the initial lookup for userName if not found by service
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            System.err.println("EntityNotFoundException in capNhatNhieuGhiChuThietBiKhiSuaXong: " + e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            Sentry.captureException(e);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Có lỗi xảy ra khi cập nhật nhiều ghi chú thiết bị: " + e.getMessage());
+            System.err.println("Unexpected Exception in capNhatNhieuGhiChuThietBiKhiSuaXong: " + e.getMessage());
+            e.printStackTrace();
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }

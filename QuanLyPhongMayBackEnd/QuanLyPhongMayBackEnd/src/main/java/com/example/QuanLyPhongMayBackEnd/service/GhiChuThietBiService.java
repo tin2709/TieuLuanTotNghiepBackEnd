@@ -599,4 +599,58 @@ public class GhiChuThietBiService {
         }
         return dates;
     }
+    @Transactional
+    public Map<String, Object> capNhatNhieuGhiChuThietBiKhiSuaXong(
+            List<Long> maGhiChuTBList,
+            String userName,
+            String token
+    ) throws SecurityException, EntityNotFoundException {
+
+        if (!isUserLoggedIn(token)) {
+            throw new SecurityException("Token không hợp lệ hoặc người dùng chưa đăng nhập.");
+        }
+
+        // 1. Find TaiKhoanSuaLoi by userName
+        TaiKhoan taiKhoanSuaLoiRef = taiKhoanRepository.findByTenDangNhap(userName)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Tài Khoản sửa lỗi với Username: " + userName));
+
+        List<GhiChuThietBiDTO> updatedDTOs = new ArrayList<>();
+        List<String> failedUpdates = new ArrayList<>();
+        Date now = new Date(); // Get current time once for consistency across batch
+
+        for (Long maGhiChuTB : maGhiChuTBList) {
+            try {
+                GhiChuThietBi existingGhiChu = ghiChuThietBiRepository.findById(maGhiChuTB)
+                        .orElseThrow(() -> new EntityNotFoundException("Ghi Chú Thiết Bị ID " + maGhiChuTB + " không tìm thấy."));
+
+                // Update the entity for fixing
+                existingGhiChu.setTaiKhoanSuaLoi(taiKhoanSuaLoiRef);
+                existingGhiChu.setNgaySua(now); // Set the current date as the fix date
+
+                // Call the existing single update method in this service
+                GhiChuThietBi updatedGhiChu = capNhat(existingGhiChu, token);
+
+                if (updatedGhiChu == null) {
+                    // This scenario means `capNhat` returned null, likely due to auth or the note not existing (already checked by findById)
+                    failedUpdates.add("Cập nhật thất bại cho Ghi Chú Thiết Bị ID: " + maGhiChuTB + " (lỗi dịch vụ hoặc quyền hạn).");
+                } else {
+                    updatedDTOs.add(mapToGhiChuThietBiDTO(updatedGhiChu));
+                }
+
+            } catch (EntityNotFoundException e) {
+                // Catch specific errors for individual notes (e.g., if a note ID was not found after initial checks)
+                failedUpdates.add("Ghi Chú Thiết Bị ID " + maGhiChuTB + " không tìm thấy: " + e.getMessage());
+            } catch (Exception e) {
+                // Catch any other unexpected errors during the update of a single note
+                // Log this specific error for Sentry
+                io.sentry.Sentry.captureException(e);
+                failedUpdates.add("Lỗi không xác định khi cập nhật Ghi Chú Thiết Bị ID " + maGhiChuTB + ": " + e.getMessage());
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("updatedNotes", updatedDTOs);
+        result.put("failedUpdates", failedUpdates);
+        return result;
+    }
 }

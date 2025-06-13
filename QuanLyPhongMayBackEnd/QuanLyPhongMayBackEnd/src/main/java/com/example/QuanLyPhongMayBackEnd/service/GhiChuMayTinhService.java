@@ -16,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.hibernate.type.descriptor.java.JdbcDateJavaType.DATE_FORMAT;
@@ -746,12 +748,62 @@ public class GhiChuMayTinhService {
         }
         return dates;
     }
+    @Transactional
+    public List<GhiChuMayTinhDTO> capNhatNhieuGhiChuMayTinhKhiSuaXong(List<Long> maMayList, String userNameForContent, String token) throws SecurityException, EntityNotFoundException {
+        // 1. Xác thực token (chỉ để kiểm tra người dùng có quyền gọi API không)
+        if (!isUserLoggedIn(token)) {
+            throw new SecurityException("Token không hợp lệ hoặc người dùng chưa đăng nhập.");
+        }
+
+        // 2. Lấy TaiKhoan entity dựa trên userName được cung cấp (không dùng token để lấy TK)
+        // Đây là điểm thay đổi cốt lõi: TaiKhoanSuaLoi giờ đây được xác định bằng userNameForContent
+        // đảm bảo userNameForContent phải là một tenDangNhap hợp lệ trong DB.
+        TaiKhoan taiKhoanSuaLoi = taiKhoanRepository.findByTenDangNhap(userNameForContent)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Tài Khoản với tên đăng nhập: '" + userNameForContent + "'. Vui lòng đảm bảo userName này tồn tại trong hệ thống."));
 
 
-    /**
-     * Maps GhiChuMayTinh entity (including related entities) to GhiChuMayTinhDTO.
-     * Assumes GhiChuMayTinh entity has relationships to MayTinh, PhongMay, and TaiKhoan.
-     */
+        List<GhiChuMayTinhDTO> updatedDTOs = new ArrayList<>();
+        Date now = new Date(); // Thời gian hiện tại cho ngaySua
+
+        // Regex để tìm và thay thế phần "(Sẽ được sửa...)"
+        Pattern patternToReplace = Pattern.compile("\\(Sẽ được sửa vào ngày \\d{4}-\\d{2}-\\d{2} từ \\d{2}:\\d{2} đến \\d{2}:\\d{2}\\)");
+
+        // 3. Lặp qua từng mã máy được cung cấp
+        for (Long maMay : maMayList) {
+            List<GhiChuMayTinh> latestUnfixedNotes = ghiChuMayTinhRepository.findLatestUnfixedByMayTinhMaMayWithDetails(maMay);
+
+            if (!latestUnfixedNotes.isEmpty()) {
+                GhiChuMayTinh ghiChu = latestUnfixedNotes.get(0);
+
+                String currentNoiDung = ghiChu.getNoiDung() != null ? ghiChu.getNoiDung() : "";
+                Matcher matcher = patternToReplace.matcher(currentNoiDung);
+
+                String newNoiDung;
+                if (matcher.find()) {
+                    newNoiDung = matcher.replaceFirst("(Đã sửa xong bởi " + userNameForContent + ")");
+                } else {
+                    newNoiDung = currentNoiDung.trim() + "\n(Đã sửa xong bởi " + userNameForContent + " vào " + DATE_FORMAT.format(now) + ")";
+                }
+
+                ghiChu.setNoiDung(newNoiDung);
+                ghiChu.setNgaySua(now);
+                ghiChu.setTaiKhoanSuaLoi(taiKhoanSuaLoi); // Gán TaiKhoan tìm được từ userNameForContent
+
+                GhiChuMayTinh savedGhiChu = ghiChuMayTinhRepository.save(ghiChu);
+                updatedDTOs.add(mapToGhiChuMayTinhDTO(savedGhiChu));
+            } else {
+                System.out.println("Không tìm thấy ghi chú nào chưa sửa hoặc nội dung không khớp cho máy tính có mã: " + maMay);
+            }
+        }
+        return updatedDTOs;
+    }
+
+
+
+/**
+ * Maps GhiChuMayTinh entity (including related entities) to GhiChuMayTinhDTO.
+ * Assumes GhiChuMayTinh entity has relationships to MayTinh, PhongMay, and TaiKhoan.
+ */
 
 
 }
